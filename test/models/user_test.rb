@@ -40,13 +40,15 @@ class UserTest < ActiveSupport::TestCase
   test "rehashes a weaker hash at login" do
     user = users(:alice) # fixture hash uses bcrypt's minimum cost
     min_cost = ActiveModel::SecurePassword.min_cost
+    cost = BCrypt::Engine.cost
     ActiveModel::SecurePassword.min_cost = false
-    BCrypt::Engine.stub(:cost, 10) do
-      assert user.rehash_password_if_needed!(PASSWORD)
-      assert_not user.reload.rehash_password_if_needed!(PASSWORD), "already at the current cost"
-    end
+    BCrypt::Engine.cost = 10
+
+    assert user.rehash_password_if_needed!(PASSWORD)
+    assert_not user.reload.rehash_password_if_needed!(PASSWORD), "already at the current cost"
     assert_equal 10, BCrypt::Password.new(user.reload.password_digest).cost
   ensure
     ActiveModel::SecurePassword.min_cost = min_cost
+    BCrypt::Engine.cost = cost
   end
 end
