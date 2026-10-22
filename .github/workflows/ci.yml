@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: createdb schema_check
       - run: psql -v ON_ERROR_STOP=1 -d schema_check -f "design specifications/08_schema.sql"
-      - run: psql -v ON_ERROR_STOP=1 -d schema_check -f "design specifications/08_schema_tests.sql" | tee schema-tests.log
+      - run: psql -v ON_ERROR_STOP=1 -d schema_check -f "design specifications/08_schema_tests.sql" 2>&1 | tee schema-tests.log
       - run: grep -q "ALL TESTS PASSED" schema-tests.log
 
   rails:
