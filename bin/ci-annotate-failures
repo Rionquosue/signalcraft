@@ -18,5 +18,13 @@ end
 
 # Boot or load errors that never reach Minitest's summary.
 if blocks.empty? && !log.match?(/^\d+ runs, /)
-  puts "::error title=Test run did not complete::#{escape.(log.lines.last(40).join)}"
+  lines = log.lines
+  # Show where things went wrong: the abort message and error lines, not the
+  # end of a long backtrace.
+  interesting = lines.each_index.select do |i|
+    lines[i].match?(/aborted!|Error|error:|FATAL|ERROR|could not|No such|denied|not found/i) && !lines[i].include?("/gems/")
+  end
+  excerpt = interesting.first(12).flat_map { |i| lines[[i - 1, 0].max..[i + 2, lines.size - 1].min] }.uniq.first(60).join
+  excerpt = lines.first(40).join if excerpt.empty?
+  puts "::error title=Test run did not complete::#{escape.(excerpt)}"
 end
