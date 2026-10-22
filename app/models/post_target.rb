@@ -33,8 +33,8 @@ class PostTarget < ApplicationRecord
   belongs_to :workspace
   belongs_to :post
   belongs_to :social_account
-  belongs_to :created_by, class_name: "User", optional: true
-  belongs_to :updated_by, class_name: "User", optional: true
+  belongs_to :creator, class_name: "User", foreign_key: :created_by, optional: true
+  belongs_to :updater, class_name: "User", foreign_key: :updated_by, optional: true
   has_many :post_target_media, -> { order(:position) }, class_name: "PostTargetMedia",
                                                          dependent: :destroy, inverse_of: :post_target
   has_one :queue_entry, dependent: :destroy
@@ -87,7 +87,7 @@ class PostTarget < ApplicationRecord
       self.provider_options = provider_options unless provider_options.equal?(UNCHANGED)
       replace_media!(media) unless media.equal?(UNCHANGED)
       self.revision += 1
-      self.updated_by = by
+      self.updater = by
       save!
     end
     self
@@ -99,7 +99,7 @@ class PostTarget < ApplicationRecord
       lock!
       raise NotEditable, self unless editable?
 
-      update!(body_override: nil, revision: revision + 1, updated_by: by)
+      update!(body_override: nil, revision: revision + 1, updater: by)
     end
   end
 
@@ -110,12 +110,12 @@ class PostTarget < ApplicationRecord
       raise NotEditable, self unless editable?
 
       post_target_media.delete_all
-      update!(media_overridden: false, revision: revision + 1, updated_by: by)
+      update!(media_overridden: false, revision: revision + 1, updater: by)
     end
   end
 
   def bump_revision!(by:)
-    update!(revision: revision + 1, updated_by: by)
+    update!(revision: revision + 1, updater: by)
   end
 
   private

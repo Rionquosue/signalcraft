@@ -6,7 +6,7 @@ class WorkspacePlugin < ApplicationRecord
 
   belongs_to :workspace
   belongs_to :plugin, foreign_key: :plugin_id, primary_key: :plugin_id, inverse_of: :workspace_plugins
-  belongs_to :enabled_by, class_name: "User", optional: true
+  belongs_to :enabler, class_name: "User", foreign_key: :enabled_by, optional: true
 
   scope :enabled, -> { where(enabled: true) }
 end

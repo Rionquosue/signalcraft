@@ -4,8 +4,8 @@ class Invitation < ApplicationRecord
   LIFETIME = 7.days
 
   belongs_to :workspace
-  belongs_to :invited_by, class_name: "User", optional: true
-  belongs_to :accepted_by, class_name: "User", optional: true
+  belongs_to :inviter, class_name: "User", foreign_key: :invited_by, optional: true
+  belongs_to :accepter, class_name: "User", foreign_key: :accepted_by, optional: true
 
   string_enum :role, Membership::ROLES
 
@@ -17,7 +17,7 @@ class Invitation < ApplicationRecord
   # Returns [invitation, token]; only the digest is stored.
   def self.issue!(workspace:, email:, role:, invited_by:)
     token = SecureRandom.urlsafe_base64(32)
-    invitation = create!(workspace: workspace, email: email, role: role, invited_by: invited_by,
+    invitation = create!(workspace: workspace, email: email, role: role, inviter: invited_by,
                          token_digest: Digest::SHA256.digest(token), expires_at: LIFETIME.from_now)
     [invitation, token]
   end

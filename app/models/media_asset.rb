@@ -7,8 +7,8 @@ class MediaAsset < ApplicationRecord
 
   belongs_to :workspace
   belongs_to :source_asset, class_name: "MediaAsset", optional: true
-  belongs_to :uploaded_by, class_name: "User", optional: true
-  belongs_to :protection_declared_by, class_name: "User", optional: true
+  belongs_to :uploader, class_name: "User", foreign_key: :uploaded_by, optional: true
+  belongs_to :protection_declarer, class_name: "User", foreign_key: :protection_declared_by, optional: true
   has_many :variants, class_name: "MediaAsset", foreign_key: :source_asset_id, dependent: :restrict_with_error,
                       inverse_of: :source_asset
   has_many :media_chunks, -> { order(:seq) }, dependent: :delete_all
@@ -28,11 +28,11 @@ class MediaAsset < ApplicationRecord
     raise ArgumentError, "only original images can be declared protected" unless original? && (media_kind.nil? || media_image?)
     raise ArgumentError, "remove this image's adjusted copies first" if variants.exists?
 
-    update!(protection_declared: true, protection_tool: tool.presence, protection_declared_by: by,
+    update!(protection_declared: true, protection_tool: tool.presence, protection_declarer: by,
             protection_declared_at: Time.current)
   end
 
   def withdraw_protection!
-    update!(protection_declared: false, protection_tool: nil, protection_declared_by: nil, protection_declared_at: nil)
+    update!(protection_declared: false, protection_tool: nil, protection_declarer: nil, protection_declared_at: nil)
   end
 end

@@ -4,7 +4,7 @@
 class ChannelQueue < ApplicationRecord
   belongs_to :workspace
   belongs_to :social_account
-  belongs_to :paused_by, class_name: "User", optional: true
+  belongs_to :pauser, class_name: "User", foreign_key: :paused_by, optional: true
   has_many :queue_slots, dependent: :destroy
   has_many :queue_entries, dependent: :destroy
 
@@ -12,11 +12,11 @@ class ChannelQueue < ApplicationRecord
   validate :timezone_must_exist
 
   def pause!(by:)
-    update!(paused: true, paused_at: Time.current, paused_by: by)
+    update!(paused: true, paused_at: Time.current, pauser: by)
   end
 
   def resume!
-    update!(paused: false, paused_at: nil, paused_by: nil)
+    update!(paused: false, paused_at: nil, pauser: nil)
   end
 
   private

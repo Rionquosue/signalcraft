@@ -4,7 +4,7 @@
 # (design specifications/08, Delivery).
 class PublishIntent < ApplicationRecord
   belongs_to :post_target
-  belongs_to :created_by, class_name: "User", optional: true
+  belongs_to :creator, class_name: "User", foreign_key: :created_by, optional: true
   has_many :publish_attempts, dependent: :restrict_with_error
 
   string_enum :kind, %w[scheduled publish_now manual_retry]

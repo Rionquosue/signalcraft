@@ -4,8 +4,8 @@
 # state and optional overrides (design specifications/02, Scheduling semantics).
 class Post < ApplicationRecord
   belongs_to :workspace
-  belongs_to :created_by, class_name: "User", optional: true
-  belongs_to :updated_by, class_name: "User", optional: true
+  belongs_to :creator, class_name: "User", foreign_key: :created_by, optional: true
+  belongs_to :updater, class_name: "User", foreign_key: :updated_by, optional: true
   has_many :post_media, -> { order(:position) }, class_name: "PostMedia", dependent: :destroy, inverse_of: :post
   has_many :post_targets, dependent: :restrict_with_error
 
@@ -19,7 +19,7 @@ class Post < ApplicationRecord
   def update_shared_body!(new_body, by:)
     transaction do
       lock!
-      update!(body: new_body, revision: revision + 1, updated_by: by)
+      update!(body: new_body, revision: revision + 1, updater: by)
       post_targets.inheriting_body.editable.find_each { |target| target.bump_revision!(by: by) }
     end
   end
