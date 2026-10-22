@@ -67,7 +67,10 @@ jobs:
       - name: Prepare database
         run: bin/rails db:create db:migrate
       - name: Run tests
-        run: bin/rails test
+        run: bin/rails test 2>&1 | tee test-output.log
+      - name: Report failures as annotations
+        if: failure()
+        run: bin/ci-annotate-failures test-output.log
       - name: Upload Gemfile.lock when it was generated here
         if: always() && hashFiles('Gemfile.lock') != ''
         uses: actions/upload-artifact@v4

@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Turns Minitest failures in a saved test log into GitHub Actions error
+# annotations, so failures are readable through the checks API without
+# downloading logs. Usage: bin/ci-annotate-failures test-output.log
+log = File.read(ARGV.fetch(0), encoding: "UTF-8").scrub
+blocks = log.scan(/^\s*\d+\) (?:Failure|Error):.*?(?=^\s*\d+\) (?:Failure|Error):|^\d+ runs, |\z)/m)
+summary = log[/^\d+ runs, .*$/] || "no summary line"
+puts "::notice title=Test summary::#{summary}"
+
+escape = ->(text) { text.gsub("%", "%25").gsub("\r", "%0D").gsub("\n", "%0A") }
+blocks.first(45).each do |block|
+  block = block.strip.lines.first(25).join
+  title = (block.lines[1] || block.lines.first).to_s.strip[0, 200]
+  puts "::error title=#{escape.(title)}::#{escape.(block)}"
+end
+
+# Boot or load errors that never reach Minitest's summary.
+if blocks.empty? && !log.match?(/^\d+ runs, /)
+  puts "::error title=Test run did not complete::#{escape.(log.lines.last(40).join)}"
+end
