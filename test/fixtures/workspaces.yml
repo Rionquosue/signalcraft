@@ -1,0 +1,7 @@
+studio:
+  name: Studio
+  media_quota_bytes: 1073741824
+
+other:
+  name: Other Studio
+  media_quota_bytes: 1073741824

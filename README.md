@@ -2,7 +2,7 @@
 
 A self-hosted social publishing workspace. You write a post once and schedule it to several platforms, each at its own time and with its own wording if you want. You then see which platforms actually lead to sales of your itch.io and Jinxxy products.
 
-> **Status:** design phase. This repository currently contains only the design specifications. No application code exists yet.
+> **Status:** early development. The design specifications are complete; the core Rails application is being built on the `dev` branch. No addons are implemented yet.
 
 ## What it does
 
@@ -71,6 +71,10 @@ All sheets are in [`design specifications/`](design%20specifications/).
 2. Sheet 04, then the addon sheets for the platforms you care about.
 3. Sheets 08 and 09 for data and Insights.
 4. Sheets 01, 03 and 10 for the services around the Rails app.
+
+## Application code
+
+The `dev` branch holds the core Rails application as it is being built; see [DEVELOPMENT.md](DEVELOPMENT.md) for what exists, the directory layout (`/var/www/signalcraft`, with `plugins/` and `config/`), configuration and tests.
 
 ## Checking the schema
 

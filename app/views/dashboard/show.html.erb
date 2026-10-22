@@ -1,0 +1,41 @@
+<% content_for :title, "Publishing queue · SignalCraft" %>
+
+<div class="workhead">
+  <div>
+    <h1>Publishing queue</h1>
+    <% if @workspace %>
+      <p class="sub"><%= @workspace.name %> · Display: <%= @workspace.default_timezone %></p>
+    <% end %>
+  </div>
+</div>
+
+<% if @workspace.nil? %>
+  <div class="empty">
+    <p>You're not a member of any workspace yet.</p>
+    <p class="sub">Ask a workspace owner to invite you.</p>
+  </div>
+<% elsif @accounts.empty? %>
+  <div class="empty">
+    <p>Connect an account to start scheduling.</p>
+    <p class="sub">Account connections arrive with the first addons.</p>
+  </div>
+<% else %>
+  <div class="board">
+    <% @accounts.each do |account| %>
+      <section class="column" aria-labelledby="account-<%= account.id %>">
+        <header class="colhead">
+          <div class="grow">
+            <h2 id="account-<%= account.id %>"><%= account.display_name %></h2>
+            <p class="sub"><%= account.plugin.manifest["name"] %> · <%= account.timezone %></p>
+            <% if account.channel_queue&.paused? %>
+              <span class="indicator">Account paused</span>
+            <% end %>
+          </div>
+        </header>
+        <div class="empty">
+          <p>Your queue is clear.</p>
+        </div>
+      </section>
+    <% end %>
+  </div>
+<% end %>

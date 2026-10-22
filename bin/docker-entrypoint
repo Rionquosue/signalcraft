@@ -1,0 +1,36 @@
+#!/bin/bash -e
+# Container entrypoint (design specifications/02, Image and process model).
+#
+# 1. Refuse to start if the plugins directory differs from the image build.
+# 2. Validate operator configuration; every problem is printed at once.
+# 3. For the migrate role, run migrations and sync addon records.
+
+cd /var/www/signalcraft
+
+ruby -e '
+  require_relative "lib/signal_craft"
+  require_relative "lib/signal_craft/plugins/lock"
+  begin
+    SignalCraft::Plugins::Lock.verify!(SignalCraft.plugins_dir)
+  rescue SignalCraft::Plugins::Lock::Mismatch => e
+    warn "signalcraft: #{e.message}"
+    exit 1
+  end
+'
+
+ruby -e '
+  require_relative "lib/signal_craft"
+  begin
+    SignalCraft.load_settings!
+  rescue SignalCraft::Settings::Error => e
+    warn e.message
+    exit 1
+  end
+'
+
+if [ "$1" = "migrate" ]; then
+  ./bin/rails db:migrate
+  exec ./bin/rails signalcraft:plugins:sync
+fi
+
+exec "$@"

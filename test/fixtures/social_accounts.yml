@@ -1,0 +1,8 @@
+studio_bluesky:
+  workspace: studio
+  plugin_id: bluesky
+  plugin_app_registration: bsky
+  provider_account_id: did:plc:studio
+  display_name: Studio
+  credentials: '{"access_token":"test"}'
+  connection_status: connected

@@ -209,7 +209,7 @@ Defined by 09_Insights_and_Attribution_Specification.md; populated by commerce a
 
 **link_clicks** — raw clicks: `occurred_at`, 16-byte daily-rotating `visitor_digest`, `referrer_host`, `is_bot` and `bot_reason` (present exactly when `is_bot`). No IP address or cookie column exists. Deleted after 90 days. **link_click_daily** keeps per-link daily totals: human clicks, unique visitors, bot clicks.
 
-**attribution_allocations** — the model's output per order line: `model_version`, `method` (code / click_share / unattributed), `social_account_id`, `tracked_link_id`, `attribution_code_id`, `share` (0–1], `net_allocated` (order currency, minor units, four decimals), `computed_at`. Enforced: code allocations credit the whole line to one account; click-share allocations name a tracked link; unattributed allocations name no account. One row per line, model version, method and link. Shares per line summing to 1 is checked by the recompute job and by a nightly consistency query.
+**attribution_allocations** — the model's output per order line: `model_version`, `attribution_method` (code / click_share / unattributed), `social_account_id`, `tracked_link_id`, `attribution_code_id`, `share` (0–1], `net_allocated` (order currency, minor units, four decimals), `computed_at`. Enforced: code allocations credit the whole line to one account; click-share allocations name a tracked link; unattributed allocations name no account. One row per line, model version, method and link. Shares per line summing to 1 is checked by the recompute job and by a nightly consistency query.
 
 **fx_rates** — `(currency, rate_date)` with `per_eur` and `source`; conversions go through EUR.
 
@@ -235,7 +235,7 @@ Defined by 10_Relay_Bot_Protocol_Specification.md.
 
 **outbox_events** — `bigint` identity order, `event_type`, `subject_type`, `subject_id`, `payload` (≤ 16 KiB), `available_at`, `dispatched_at`, `attempt_count`, `last_error`. Written in the same transaction as the change it announces. The dispatcher reads `WHERE dispatched_at IS NULL ORDER BY available_at, id … FOR UPDATE SKIP LOCKED`.
 
-**audit_events** — append-only: `occurred_at`, `workspace_id`, `actor_type` (user / system / plugin), `actor_user_id`, `actor_label`, `action`, `subject_type`, `subject_id`, sanitized `changes` (≤ 64 KiB, never secrets), `request_id`, `ip_address`. Deliberately has no foreign keys so history survives deletions. A BRIN index on time keeps range scans cheap as the table grows.
+**audit_events** — append-only: `occurred_at`, `workspace_id`, `actor_type` (user / system / plugin), `actor_user_id`, `actor_label`, `action`, `subject_type`, `subject_id`, sanitized `details` of what changed (≤ 64 KiB, never secrets; not named `changes`, which clashes with Active Record), `request_id`, `ip_address`. Deliberately has no foreign keys so history survives deletions. A BRIN index on time keeps range scans cheap as the table grows.
 
 **process_heartbeats** — `process_key`, `role` (web / media / worker), `hostname`, `release`, `started_at`, `last_seen_at`. Used by monitoring and by the release-compatibility check during deploys.
 
@@ -297,6 +297,7 @@ Media dominates storage: `media_chunks` will be most of the database, and of WAL
 ## Changes in 1.1
 
 - Added store, tracked-link, click, attribution, FX and cost tables (09); post metric polls and snapshots; relay tokens, deliveries and media grants (10).
+- Renamed `audit_events.changes` to `details` and `attribution_allocations.method` to `attribution_method` (both names clash with Ruby or Active Record methods). Addon ids may be 1 to 64 characters.
 - `plugins.kind`, workspace insights settings, store-account webhook endpoints, metrics polling columns on `post_targets`.
 
 ## Changes to other sheets

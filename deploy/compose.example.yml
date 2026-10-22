@@ -1,0 +1,84 @@
+# Example deployment (design specifications/02, Deployment topology).
+# Copy, adjust names and networks, then: docker compose -f compose.yml up -d
+#
+# Operator-provided files on the host:
+#   ./config/signalcraft.yml   -> /var/www/signalcraft/config/signalcraft.yml (read-only)
+#   ./config/secrets/          -> /var/www/signalcraft/config/secrets/        (read-only)
+#   ./plugins/                 -> /var/www/signalcraft/plugins/               (optional, read-only;
+#                                 must match the image build, see plugins/README.md)
+#
+# Only these two config entries are mounted, not the whole config directory,
+# because the image's config/ also holds the application's own Rails
+# configuration (routes, environments, initializers).
+
+x-signalcraft: &signalcraft
+  image: signalcraft:latest
+  user: "10001:10001"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs:
+    - /var/www/signalcraft/tmp:size=64m,mode=1777
+    - /var/www/signalcraft/log:size=16m,mode=1777
+    - /tmp:size=128m,mode=1777       # request bodies are buffered here, one chunk at a time
+  volumes:
+    - ./config/signalcraft.yml:/var/www/signalcraft/config/signalcraft.yml:ro
+    - ./config/secrets:/var/www/signalcraft/config/secrets:ro
+    # - ./plugins:/var/www/signalcraft/plugins:ro
+  restart: unless-stopped
+
+services:
+  migrate:
+    <<: *signalcraft
+    command: ["migrate"]
+    environment:
+      DATABASE_USER: signalcraft_migrator      # DDL-capable role, used only here
+      DATABASE_PASSWORD_FILE: /var/www/signalcraft/config/secrets/database_migrator_password
+    networks: [database]
+    restart: "no"
+
+  web:
+    <<: *signalcraft
+    command: ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+    networks: [proxy, database, outbound]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  media:
+    <<: *signalcraft
+    command: ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "3001", "-C", "config/puma_media.rb"]
+    networks: [proxy, database]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *signalcraft
+    command: ["./bin/jobs"]
+    networks: [database, media, outbound]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # The FFmpeg service (design specifications/01, 03) is a separate image,
+  # not yet built. It joins only the internal media network.
+  # ffmpeg:
+  #   image: signalcraft-ffmpeg:latest
+  #   networks: [media]
+
+networks:
+  proxy:
+    external: true          # the operator's existing reverse proxy network
+    name: ${PROXY_NETWORK:-proxy}
+  database:
+    external: true          # the existing PostgreSQL server's private network
+    name: ${DATABASE_NETWORK:-database}
+  media:
+    internal: true          # worker <-> FFmpeg only
+  outbound: {}              # controlled egress to provider APIs

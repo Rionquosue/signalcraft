@@ -1,0 +1,17 @@
+launch_bluesky:
+  workspace: studio
+  post: launch
+  social_account: studio_bluesky
+  occurrence: 1
+  mode: manual
+  state: scheduled
+  due_at: <%= 2.days.from_now.to_fs(:db) %>
+
+launch_bluesky_again:
+  workspace: studio
+  post: launch
+  social_account: studio_bluesky
+  occurrence: 2
+  mode: manual
+  state: scheduled
+  due_at: <%= 3.days.from_now.to_fs(:db) %>

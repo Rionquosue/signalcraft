@@ -71,7 +71,7 @@ settings:
     default: public
 ```
 
-This is a fictional provider manifest, not a claim about any real API. IDs use [a-z][a-z0-9_]{2,63}. Entrypoints resolve only from the installed registry, never from user input. Duplicate IDs, incompatible API ranges and unknown required manifest fields fail addon loading. Missing optional capabilities default false (or an empty list). The owner dashboard must expose failures, and affected targets become blocked.
+This is a fictional provider manifest, not a claim about any real API. IDs use [a-z][a-z0-9_]{0,63} (1 to 64 characters, so the X addon can use `x`). Entrypoints resolve only from the installed registry, never from user input. Duplicate IDs, incompatible API ranges and unknown required manifest fields fail addon loading. Missing optional capabilities default false (or an empty list). The owner dashboard must expose failures, and affected targets become blocked.
 
 `media_fetch_by_url: true` means the provider can only receive media by fetching a URL. When the host has no `PUBLIC_MEDIA_BASE_URL`, it reports media as unsupported for that addon's accounts, with an explanation, instead of failing at publish time.
 

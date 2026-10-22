@@ -1,0 +1,32 @@
+# See https://help.github.com/articles/ignoring-files for more about ignoring files.
+
+# Ignore bundler config.
+/.bundle
+
+# Ignore all environment files.
+/.env*
+
+# Ignore all logfiles and tempfiles.
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Ignore pidfiles, but keep the directory.
+/tmp/pids/*
+!/tmp/pids/
+!/tmp/pids/.keep
+
+/storage/*
+!/storage/.keep
+
+/public/assets
+
+# Operator configuration and secrets are deployment-specific.
+/config/signalcraft.yml
+/config/secrets/*
+!/config/secrets/README.md
+
+# Addons are installed per deployment; only the README and lock format are tracked.
+/plugins/*
+!/plugins/README.md

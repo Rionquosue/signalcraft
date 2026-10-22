@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Fails if db/sql/0001_core_schema.sql has drifted from the reference DDL in
+# "design specifications/08_schema.sql" (apart from the transaction wrapper
+# and the header comment). Run in CI.
+root = File.expand_path("..", __dir__)
+spec = File.read(File.join(root, "design specifications", "08_schema.sql"))
+impl = File.read(File.join(root, "db", "sql", "0001_core_schema.sql"))
+
+normalize = lambda do |sql|
+  sql.lines.reject { |line| line.start_with?("-- ") || line.strip.match?(/\A(BEGIN|COMMIT);\z/) }
+     .join.gsub(/\n{2,}/, "\n").strip
+end
+
+if normalize.(spec) == normalize.(impl)
+  puts "Schema in sync with design specifications/08_schema.sql"
+else
+  warn "db/sql/0001_core_schema.sql differs from design specifications/08_schema.sql"
+  exit 1
+end

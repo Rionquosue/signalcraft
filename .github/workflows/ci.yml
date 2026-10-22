@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  lib:
+    name: Framework-independent tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - name: Settings, manifest and plugin registry tests
+        run: ruby -Ilib -Itest -e 'Dir["test/lib/**/*_test.rb"].each { |f| require File.expand_path(f) }'
+      - name: Migration SQL matches the specification
+        run: ruby bin/check-schema-sync
+
+  schema:
+    name: Reference schema and constraint tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - run: createdb schema_check
+      - run: psql -v ON_ERROR_STOP=1 -d schema_check -f "design specifications/08_schema.sql"
+      - run: psql -v ON_ERROR_STOP=1 -d schema_check -f "design specifications/08_schema_tests.sql" | tee schema-tests.log
+      - run: grep -q "ALL TESTS PASSED" schema-tests.log
+
+  rails:
+    name: Rails tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RAILS_ENV: test
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - name: Development configuration
+        run: RAILS_ENV=development bin/dev-config --database-host localhost --database-user postgres --database-password postgres
+      - name: Prepare database
+        run: bin/rails db:create db:migrate
+      - name: Run tests
+        run: bin/rails test
+      - name: Upload Gemfile.lock when it was generated here
+        if: always() && hashFiles('Gemfile.lock') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gemfile.lock
+          path: Gemfile.lock
+      - name: Upload db/structure.sql
+        if: always() && hashFiles('db/structure.sql') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: structure.sql
+          path: db/structure.sql

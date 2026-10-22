@@ -1,0 +1,5 @@
+bsky:
+  plugin_id: bluesky
+  instance_host: bsky.social
+  credentials_source: operator_config
+  redirect_uri: https://localhost/integrations/bluesky/callback

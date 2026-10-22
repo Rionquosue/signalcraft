@@ -95,7 +95,7 @@ CREATE UNIQUE INDEX invitations_open_email_key
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE plugins (
-  plugin_id    text PRIMARY KEY CHECK (plugin_id ~ '^[a-z][a-z0-9_]{2,63}$'),
+  plugin_id    text PRIMARY KEY CHECK (plugin_id ~ '^[a-z][a-z0-9_]{0,63}$'),
   kind         text NOT NULL CHECK (kind IN ('social', 'commerce')),
   version      text NOT NULL,
   plugin_api   text NOT NULL,
@@ -727,11 +727,11 @@ CREATE TABLE audit_events (
   action        text NOT NULL CHECK (length(action) <= 100),
   subject_type  text CHECK (length(subject_type) <= 64),
   subject_id    uuid,
-  changes       jsonb,                                         -- sanitized; never secrets
+  details       jsonb,                                         -- sanitized changes; never secrets
   request_id    text CHECK (length(request_id) <= 128),
   ip_address    inet,
   CHECK (actor_type <> 'user' OR actor_user_id IS NOT NULL),
-  CHECK (changes IS NULL OR octet_length(changes::text) <= 65536)
+  CHECK (details IS NULL OR octet_length(details::text) <= 65536)
 );
 CREATE INDEX audit_events_workspace_time_idx ON audit_events (workspace_id, occurred_at DESC);
 CREATE INDEX audit_events_subject_idx ON audit_events (subject_type, subject_id, occurred_at DESC);
@@ -880,7 +880,7 @@ CREATE TABLE attribution_allocations (
   store_order_id        uuid NOT NULL,
   store_product_id      uuid NOT NULL,
   model_version         smallint NOT NULL CHECK (model_version >= 1),
-  method                text NOT NULL CHECK (method IN ('code', 'click_share', 'unattributed')),
+  attribution_method    text NOT NULL CHECK (attribution_method IN ('code', 'click_share', 'unattributed')),
   social_account_id     uuid,
   tracked_link_id       uuid REFERENCES tracked_links ON DELETE SET NULL,
   attribution_code_id   uuid REFERENCES attribution_codes ON DELETE SET NULL,
@@ -892,13 +892,13 @@ CREATE TABLE attribution_allocations (
   FOREIGN KEY (store_order_id, store_product_id) REFERENCES store_order_items (store_order_id, store_product_id)
     ON DELETE CASCADE,
   FOREIGN KEY (social_account_id, workspace_id) REFERENCES social_accounts (id, workspace_id),
-  CHECK ((method = 'unattributed') = (social_account_id IS NULL)),
-  CHECK (method <> 'code' OR (attribution_code_id IS NOT NULL AND share = 1)),
-  CHECK (method <> 'click_share' OR tracked_link_id IS NOT NULL),
-  CHECK (method <> 'unattributed' OR (share = 1 AND tracked_link_id IS NULL))
+  CHECK ((attribution_method = 'unattributed') = (social_account_id IS NULL)),
+  CHECK (attribution_method <> 'code' OR (attribution_code_id IS NOT NULL AND share = 1)),
+  CHECK (attribution_method <> 'click_share' OR tracked_link_id IS NOT NULL),
+  CHECK (attribution_method <> 'unattributed' OR (share = 1 AND tracked_link_id IS NULL))
 );
 CREATE UNIQUE INDEX attribution_allocations_line_key
-  ON attribution_allocations (store_order_id, store_product_id, model_version, method,
+  ON attribution_allocations (store_order_id, store_product_id, model_version, attribution_method,
     coalesce(tracked_link_id, '00000000-0000-0000-0000-000000000000'::uuid));
 CREATE INDEX attribution_allocations_account_idx ON attribution_allocations (social_account_id, model_version);
 

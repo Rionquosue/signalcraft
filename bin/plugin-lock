@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Writes plugins/.lock.json. Run at image build after the addons are copied in
+# (see Dockerfile); bin/docker-entrypoint refuses to start if the directory
+# later differs.
+require_relative "../lib/signal_craft"
+require_relative "../lib/signal_craft/plugins/lock"
+
+SignalCraft::Plugins::Lock.write(SignalCraft.plugins_dir)
+puts "Wrote #{SignalCraft.plugins_dir.join(SignalCraft::Plugins::Lock::FILE)}"

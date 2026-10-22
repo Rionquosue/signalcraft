@@ -1,0 +1,19 @@
+# Solid Queue workers (design specifications/02: PUBLISH_CONCURRENCY threads).
+default: &default
+  dispatchers:
+    - polling_interval: 1
+      batch_size: 500
+  workers:
+    - queues: "*"
+      threads: <%= SignalCraft.settings.publish_concurrency %>
+      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      polling_interval: 1
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

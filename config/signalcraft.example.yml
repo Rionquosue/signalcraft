@@ -1,0 +1,48 @@
+# SignalCraft operator configuration.
+#
+# Copy to config/signalcraft.yml (in a deployment:
+# /var/www/signalcraft/config/signalcraft.yml). Environment variables with the
+# upper-case name override these values.
+#
+# Secrets are never written here. Point at files instead (relative paths are
+# resolved from this config directory), for example read-only mounts under
+# config/secrets/ or Docker secrets under /run/secrets/.
+# Reference: design specifications/02_Rails_Container_Design.md.
+
+public_base_url: https://social.example.org
+# public_media_base_url: https://media.social.example.org   # needed for Instagram and provider fetches
+
+# Existing PostgreSQL server
+database_host: postgres
+database_port: 5432
+database_name: signalcraft
+database_user: signalcraft_app
+database_sslmode: verify-full          # disable only on a trusted private Docker network
+database_password_file: secrets/database_password
+
+# Application secrets (one value per file)
+secret_key_base_file: secrets/secret_key_base
+encryption_primary_keys_file: secrets/encryption_primary_keys   # one key per line; last one encrypts
+encryption_key_derivation_salt_file: secrets/encryption_key_derivation_salt
+
+# FFmpeg service (worker only)
+ffmpeg_base_url: http://ffmpeg:8080
+# ffmpeg_api_key_file: secrets/ffmpeg_api_key
+
+# Capacity
+web_concurrency: 1
+rails_max_threads: 3
+publish_concurrency: 2
+
+# Media
+workspace_media_quota_bytes: 10737418240   # 10 GiB per workspace
+max_upload_bytes: 268435456
+media_chunk_bytes: 2097152
+
+# Scheduling
+default_timezone: America/Toronto
+dispatch_interval_seconds: 15
+missed_schedule_grace_seconds: 900
+
+# Paid provider budgets in US dollars per month, e.g. { x: 25 }
+provider_budgets: {}

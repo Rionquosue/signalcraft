@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title><%= content_for(:title) || "SignalCraft" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="application-name" content="SignalCraft">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="<%= authenticated? ? "with-rail" : "bare" %>">
+    <% if authenticated? %>
+      <header class="topbar">
+        <span class="brand"><span class="wordmark" aria-hidden="true">S</span>SignalCraft</span>
+        <span class="topbar-user"><%= current_user.display_name %></span>
+        <%= button_to "Sign out", session_path, method: :delete, class: "button" %>
+      </header>
+      <div class="layout">
+        <nav class="rail" aria-label="Main">
+          <%= link_to "Queue", root_path, class: "nav active", aria: { current: "page" } %>
+          <span class="nav disabled" aria-disabled="true">Calendar</span>
+          <span class="nav disabled" aria-disabled="true">Drafts</span>
+          <span class="nav disabled" aria-disabled="true">Media</span>
+          <span class="nav disabled" aria-disabled="true">History</span>
+          <span class="nav disabled" aria-disabled="true">Insights</span>
+          <p class="rail-heading">Workspace</p>
+          <span class="nav disabled" aria-disabled="true">Accounts</span>
+          <span class="nav disabled" aria-disabled="true">Settings</span>
+        </nav>
+        <main class="work" id="main">
+          <%= render "layouts/flash" %>
+          <%= yield %>
+        </main>
+      </div>
+    <% else %>
+      <main class="bare-main" id="main">
+        <%= render "layouts/flash" %>
+        <%= yield %>
+      </main>
+    <% end %>
+  </body>
+</html>

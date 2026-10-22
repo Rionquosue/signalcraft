@@ -1,0 +1,8 @@
+bluesky:
+  plugin_id: bluesky
+  kind: social
+  version: 1.0.0
+  plugin_api: ">= 1.2, < 2.0"
+  manifest: <%= { "id" => "bluesky", "name" => "Bluesky" }.to_json %>
+  load_status: loaded
+  last_seen_at: <%= Time.current.to_fs(:db) %>

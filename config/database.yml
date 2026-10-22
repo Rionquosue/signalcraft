@@ -1,0 +1,26 @@
+# Connection to the operator's existing PostgreSQL server. Every value comes
+# from SignalCraft.settings (config/signalcraft.yml, environment variables and
+# secret files under config/secrets/), so nothing secret is written here.
+<% s = SignalCraft.settings %>
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= s.database_host %>
+  port: <%= s.database_port %>
+  username: <%= s.database_user %>
+  password: <%= s.database_password.to_s.to_json %>
+  sslmode: <%= s.database_sslmode %>
+  pool: <%= [s.database_pool, s.rails_max_threads].max %>
+  prepared_statements: true
+
+development:
+  <<: *default
+  database: <%= s.database_name %>
+
+test:
+  <<: *default
+  database: <%= s.database_name.end_with?("_test") ? s.database_name : "#{s.database_name}_test" %>
+
+production:
+  <<: *default
+  database: <%= s.database_name %>

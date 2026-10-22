@@ -241,26 +241,26 @@ SELECT pg_temp.must_fail('an attribution code is unique per store regardless of 
   INSERT INTO attribution_codes (workspace_id, store_account_id, social_account_id, code, kind) VALUES
   ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000701',
    '00000000-0000-0000-0000-0000000000d1', 'bsky10', 'discount') $$);
-INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, method,
+INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, attribution_method,
                                      social_account_id, attribution_code_id, share, net_allocated, currency) VALUES
   ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000703',
    '00000000-0000-0000-0000-000000000702', 1, 'code', '00000000-0000-0000-0000-0000000000d1',
    '00000000-0000-0000-0000-000000000705', 1, 2250, 'USD');
 DO $$ BEGIN RAISE NOTICE 'PASS  code attribution credits the whole line'; END $$;
 SELECT pg_temp.must_fail('code attribution cannot split a line', $$
-  INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, method,
+  INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, attribution_method,
                                        social_account_id, attribution_code_id, share, net_allocated, currency) VALUES
   ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000703',
    '00000000-0000-0000-0000-000000000702', 2, 'code', '00000000-0000-0000-0000-0000000000d1',
    '00000000-0000-0000-0000-000000000705', 0.5, 1125, 'USD') $$);
 SELECT pg_temp.must_fail('unattributed allocations name no account', $$
-  INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, method,
+  INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, attribution_method,
                                        social_account_id, share, net_allocated, currency) VALUES
   ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000703',
    '00000000-0000-0000-0000-000000000702', 3, 'unattributed', '00000000-0000-0000-0000-0000000000d1',
    1, 2250, 'USD') $$);
 SELECT pg_temp.must_fail('click-share allocations need a tracked link', $$
-  INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, method,
+  INSERT INTO attribution_allocations (workspace_id, store_order_id, store_product_id, model_version, attribution_method,
                                        social_account_id, share, net_allocated, currency) VALUES
   ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000703',
    '00000000-0000-0000-0000-000000000702', 4, 'click_share', '00000000-0000-0000-0000-0000000000d1',

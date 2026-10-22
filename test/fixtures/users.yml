@@ -1,0 +1,16 @@
+<% digest = BCrypt::Password.create(ActiveSupport::TestCase::PASSWORD, cost: BCrypt::Engine::MIN_COST) %>
+alice:
+  email: alice@example.com
+  display_name: Alice Owner
+  password_digest: <%= digest %>
+
+bob:
+  email: bob@example.com
+  display_name: Bob Editor
+  password_digest: <%= digest %>
+
+disabled:
+  email: gone@example.com
+  display_name: Former Member
+  password_digest: <%= digest %>
+  disabled_at: <%= 1.day.ago.to_fs(:db) %>

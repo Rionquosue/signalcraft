@@ -1,0 +1,9 @@
+alice_studio:
+  workspace: studio
+  user: alice
+  role: owner
+
+bob_studio:
+  workspace: studio
+  user: bob
+  role: editor

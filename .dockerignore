@@ -1,0 +1,25 @@
+# See https://docs.docker.com/engine/reference/builder/#dockerignore-file for more about ignoring files.
+
+/.git/
+/.gitignore
+/.github/
+/.bundle
+/.env*
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/tmp/pids/*
+!/tmp/pids/.keep
+/storage/*
+!/storage/.keep
+/public/assets
+/node_modules/
+/design specifications/
+/deploy/
+/test/
+
+# Operator configuration and secrets are mounted at runtime, never baked in.
+/config/signalcraft.yml
+/config/secrets/*
+!/config/secrets/README.md
