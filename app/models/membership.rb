@@ -23,13 +23,15 @@ class Membership < ApplicationRecord
   end
 
   def workspace_keeps_an_owner
-    return unless role_was == "owner" && !owner?
+    return unless role_in_database == "owner" && !owner?
 
     errors.add(:role, "cannot be changed: a workspace needs at least one owner") unless other_owners_exist?
   end
 
+  # Uses the saved role: an unsaved change (for example a rejected demotion)
+  # must not let the last owner be removed.
   def ensure_not_last_owner
-    return unless owner? && !other_owners_exist?
+    return unless role_in_database == "owner" && !other_owners_exist?
 
     errors.add(:base, "A workspace needs at least one owner")
     throw :abort

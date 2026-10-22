@@ -20,7 +20,9 @@ class EnumConsistencyTest < ActiveSupport::TestCase
         WHERE c.contype = 'c' AND t.relname = #{connection.quote(table)}
       SQL
     end
-    pattern = /\(\(?#{Regexp.escape(column)} = ANY \(ARRAY\[(.+?)\]\)\)/
+    # Only a constraint that is exactly "column IN (...)"; combined checks such
+    # as "state IN (...) OR sha256 IS NOT NULL" are other rules.
+    pattern = /\ACHECK \(\(#{Regexp.escape(column)} = ANY \(ARRAY\[(.+?)\]\)\)\)\z/
     definition = definitions.find { |d| d.match?(pattern) }
     return nil unless definition
 
