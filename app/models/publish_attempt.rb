@@ -6,8 +6,10 @@ class PublishAttempt < ApplicationRecord
   belongs_to :publish_intent
   belongs_to :post_target
   belongs_to :plugin, foreign_key: :plugin_id, primary_key: :plugin_id
+  has_one :plugin_checkpoint, dependent: :destroy
 
-  string_enum :state, %w[claimed submitting pending published not_published unknown failed abandoned]
+  # Prefixed: "not_published" would otherwise clash with the negative scope of "published".
+  string_enum :state, %w[claimed submitting pending published not_published unknown failed abandoned], prefix: true
   string_enum :delivery_state, %w[not_submitted submitted unknown], prefix: :delivery
 
   encrypts :receipt

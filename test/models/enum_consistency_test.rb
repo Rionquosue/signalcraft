@@ -8,7 +8,7 @@ require "test_helper"
 class EnumConsistencyTest < ActiveSupport::TestCase
   MODELS = [
     Membership, Invitation, Plugin, PluginAppRegistration, SocialAccount, PostTarget, MediaAsset,
-    PublishIntent, PublishAttempt, AuditEvent, LoginThrottle, ProcessHeartbeat
+    PublishIntent, PublishAttempt, AuditEvent, LoginThrottle, ProcessHeartbeat, ProviderThrottle
   ].freeze
 
   def check_values(table, column)

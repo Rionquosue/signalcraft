@@ -2,6 +2,8 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 
+Dir[File.expand_path("support/**/*.rb", __dir__)].each { |file| require file }
+
 module ActiveSupport
   class TestCase
     # Run tests in parallel with specified workers
@@ -31,8 +33,19 @@ module SchedulingHelper
   end
 end
 
+# Routes the fixture Bluesky account to FakeSocialAddon and enables it.
+module PublishingHelper
+  def use_fake_addon!(entrypoint = "FakeSocialAddon")
+    FakeSocialAddon.reset!
+    plugin = plugins(:bluesky)
+    plugin.update!(manifest: plugin.manifest.merge("entrypoint" => entrypoint))
+    WorkspacePlugin.create!(workspace: workspaces(:studio), plugin: plugin, enabled: true, settings_schema_version: 1)
+  end
+end
+
 class ActiveSupport::TestCase
   include SchedulingHelper
+  include PublishingHelper
 end
 
 module SignInHelper

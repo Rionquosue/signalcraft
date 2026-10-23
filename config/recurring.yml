@@ -1,6 +1,16 @@
-# Recurring jobs (Solid Queue). The dispatcher and cleanup jobs are added as
-# the scheduling and media features are built.
+# Recurring jobs (Solid Queue). The dispatcher runs every
+# DISPATCH_INTERVAL_SECONDS (design specifications/02, Lateness and missed
+# schedules); overlapping runs are harmless.
+default: &default
+  dispatch:
+    class: DispatchJob
+    schedule: every <%= SignalCraft.settings.dispatch_interval_seconds %> seconds
+
+development:
+  <<: *default
+
 production:
+  <<: *default
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
