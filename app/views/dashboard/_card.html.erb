@@ -1,0 +1,48 @@
+<% entry = target.queue_entry %>
+<% position = entry && waiting.index(entry.id) %>
+<article class="card" aria-label="<%= target.social_account.display_name %>, <%= display_time(target.due_at, zone) %>">
+  <div class="cardtop">
+    <span class="time" title="<%= time_with_offset(target.due_at, target.social_account.timezone) %>">
+      <%= display_time(target.due_at, zone) %>
+    </span>
+    <span class="mode">
+      <% if target.manual? %>
+        <svg class="pin" aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M6 1.5h4l-.5 4 2.5 2.5v1H4v-1L6.5 5.5zM8 9v5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <% end %>
+      <%= mode_label(target) %>
+    </span>
+  </div>
+  <p class="preview-text"><%= target.effective_body.presence || "(No text)" %></p>
+  <% if target.effective_media.any? %>
+    <p class="sub"><%= pluralize(target.effective_media.size, "attachment") %></p>
+  <% end %>
+  <div class="cardfoot">
+    <span>
+      <%= state_badge(target) %>
+      <% if target.body_overridden? || target.media_overridden? %>
+        <span class="badge neutral">Edited for <%= platform_name(target.social_account) %></span>
+      <% end %>
+    </span>
+  </div>
+  <% if @can_publish %>
+    <div class="cardactions">
+      <% if target.editable? %>
+        <%= link_to "Edit for #{platform_name(target.social_account)}", edit_post_path(target.post, target: target.id) %>
+      <% else %>
+        <%= button_to "Copy to new draft", copy_post_target_path(target), class: "linkbutton" %>
+      <% end %>
+      <% if position %>
+        <% if position.positive? %>
+          <%= link_to "Move up", new_channel_queue_move_path(queue, entry_id: entry.id, direction: "up") %>
+        <% end %>
+        <% if position < waiting.size - 1 %>
+          <%= link_to "Move down", new_channel_queue_move_path(queue, entry_id: entry.id, direction: "down") %>
+        <% end %>
+      <% end %>
+      <% if target.needs_attention? && target.attention_schedule_missed? %>
+        <%= button_to "Publish now", publish_now_post_target_path(target), class: "linkbutton" %>
+        <%= link_to "Reschedule", edit_post_path(target.post, target: target.id) %>
+      <% end %>
+    </div>
+  <% end %>
+</article>

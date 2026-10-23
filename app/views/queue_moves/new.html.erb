@@ -1,0 +1,37 @@
+<% content_for :title, "Move in queue · SignalCraft" %>
+<% zone = @queue.workspace.default_timezone %>
+
+<div class="workhead">
+  <h1>Move in <%= @queue.social_account.display_name %>'s queue</h1>
+  <p class="sub">Review the changed dates before saving.</p>
+</div>
+
+<section class="card">
+  <% if @changes.empty? %>
+    <p>This move doesn't change any dates.</p>
+  <% else %>
+    <table>
+      <thead><tr><th scope="col">Post</th><th scope="col">Was</th><th scope="col">Becomes</th></tr></thead>
+      <tbody>
+        <% @changes.each do |change| %>
+          <tr>
+            <td><%= truncate(change.target.effective_body, length: 80) %></td>
+            <td class="time"><%= display_time(change.from, zone) %></td>
+            <td class="time"><%= display_time(change.to, zone) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%= form_with url: channel_queue_moves_path(@queue), class: "actions" do |form| %>
+    <%= hidden_field_tag :version, @version %>
+    <%= hidden_field_tag :entry_id, params[:entry_id] %>
+    <%= hidden_field_tag :direction, params[:direction] %>
+    <% @order.each do |id| %>
+      <%= hidden_field_tag "order[]", id, id: nil %>
+    <% end %>
+    <%= form.submit "Save new order", class: "button primary", disabled: @changes.empty? %>
+    <%= link_to "Cancel", root_path(workspace_id: @queue.workspace_id), class: "button" %>
+  <% end %>
+</section>

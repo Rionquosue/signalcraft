@@ -7,7 +7,20 @@
       <p class="sub"><%= @workspace.name %> · Display: <%= @workspace.default_timezone %></p>
     <% end %>
   </div>
+  <% if @workspace && @can_publish && @accounts.any? %>
+    <%= link_to "New post", new_post_path(workspace_id: @workspace.id), class: "button primary" %>
+  <% end %>
 </div>
+
+<% if params[:retry_entry].present? && @can_publish %>
+  <% retry_queue = @accounts.filter_map(&:channel_queue).find { |q| @waiting_ids.fetch(q.id, []).include?(params[:retry_entry]) } %>
+  <% if retry_queue %>
+    <p class="banner">
+      <%= link_to "Try the move again", new_channel_queue_move_path(retry_queue, entry_id: params[:retry_entry],
+                                                                     direction: params[:retry_direction]) %>
+    </p>
+  <% end %>
+<% end %>
 
 <% if @workspace.nil? %>
   <div class="empty">
@@ -22,20 +35,9 @@
 <% else %>
   <div class="board">
     <% @accounts.each do |account| %>
-      <section class="column" aria-labelledby="account-<%= account.id %>">
-        <header class="colhead">
-          <div class="grow">
-            <h2 id="account-<%= account.id %>"><%= account.display_name %></h2>
-            <p class="sub"><%= account.plugin.manifest["name"] %> · <%= account.timezone %></p>
-            <% if account.channel_queue&.paused? %>
-              <span class="indicator">Account paused</span>
-            <% end %>
-          </div>
-        </header>
-        <div class="empty">
-          <p>Your queue is clear.</p>
-        </div>
-      </section>
+      <%= render "column", account: account, queue: account.channel_queue,
+                           targets: @targets_by_account.fetch(account.id, []),
+                           waiting: @waiting_ids.fetch(account.channel_queue&.id, []) %>
     <% end %>
   </div>
 <% end %>

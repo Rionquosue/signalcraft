@@ -20,6 +20,9 @@ class SocialAccount < ApplicationRecord
   validates :display_name, presence: true, length: { maximum: 255 }
   validates :credentials, presence: true, if: :connected?
 
+  # Every account has a queue, so its posting times can be set right away.
+  after_create { ChannelQueue.for_account!(self) }
+
   def timezone
     channel_queue&.timezone || workspace.default_timezone
   end

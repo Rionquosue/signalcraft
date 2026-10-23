@@ -7,6 +7,7 @@ class Workspace < ApplicationRecord
   has_many :workspace_plugins, dependent: :destroy
   has_many :social_accounts, dependent: :restrict_with_error
   has_many :posts, dependent: :restrict_with_error
+  has_many :post_targets, dependent: :restrict_with_error
   has_many :media_assets, dependent: :restrict_with_error
 
   attribute :media_quota_bytes, :integer, default: -> { SignalCraft.settings.workspace_media_quota_bytes }

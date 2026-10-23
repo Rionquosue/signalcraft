@@ -1,0 +1,95 @@
+<% content_for :title, "Edit post · SignalCraft" %>
+<% targets = @composer.rows.map(&:target) %>
+
+<div class="composer">
+  <div class="composegrid">
+    <div class="editor">
+      <h1>Post</h1>
+      <p class="sub"><%= @post.workspace.name %> · Revision <%= @post.revision %></p>
+
+      <%# Per-account tabs (05, Editing a queued post for one platform). %>
+      <nav class="tabs" aria-label="Accounts">
+        <% targets.each do |target| %>
+          <%= link_to edit_post_path(@post, target: target.id),
+                      class: ["tab", ("selected" if target == @tab)],
+                      aria: { current: (target == @tab ? "page" : nil) } do %>
+            <%= target.social_account.display_name %>
+            <span class="sub"><%= platform_name(target.social_account) %></span>
+            <% if target.body_overridden? %><span class="badge neutral">Edited</span><% end %>
+          <% end %>
+        <% end %>
+      </nav>
+
+      <% if @tab %>
+        <%= render "platform_tab", target: @tab %>
+      <% end %>
+    </div>
+
+    <aside class="preview" aria-label="Preview">
+      <h2>Preview</h2>
+      <% if @tab %>
+        <p class="sub">What <%= @tab.social_account.display_name %> on <%= platform_name(@tab.social_account) %> will receive</p>
+        <div class="card"><p class="preview-full"><%= @tab.effective_body.presence || "(No text)" %></p></div>
+      <% end %>
+    </aside>
+  </div>
+
+  <%= form_with url: post_path(@post), method: :patch, class: "composer-form" do |form| %>
+    <div class="summary">
+      <div class="field">
+        <%= label_tag "post_body", "Shared text", class: "label" %>
+        <%= text_area_tag "post[body]", @post.body, id: "post_body", rows: 5, maxlength: 20_000, class: "textinput" %>
+        <p class="sub">Changing the shared text updates every account that has not been edited separately.</p>
+      </div>
+
+      <h2 class="label">Schedule</h2>
+      <%= render "schedule_table", composer: @composer %>
+    </div>
+
+    <% if @confirm_now %>
+      <div class="banner banner-warn confirm" role="alert">
+        <p><strong><%= @confirm_now.map { |row| row.target.social_account.display_name }.to_sentence %></strong>
+          will publish now<%= ". Later publications keep their times" if @composer.ready_rows.size > @confirm_now.size %>.</p>
+        <% @confirm_now.select { |row| row.target.social_account.channel_queue&.paused? }.each do |row| %>
+          <p><%= row.target.social_account.display_name %> is paused, so it will not publish until the account is
+            resumed. <%= link_to "Resume account", resume_channel_queue_path(row.target.social_account.channel_queue) %>
+            or choose another mode to keep it scheduled.</p>
+        <% end %>
+        <%= hidden_field_tag :confirmed_now, "1" %>
+        <%= form.button "Confirm and publish", name: "commit_action", value: @confirm_action, class: "button primary" %>
+      </div>
+    <% end %>
+
+    <div class="footer">
+      <%= form.button "Save draft", name: "commit_action", value: "draft", class: "button" %>
+      <span class="grow"></span>
+      <% ready = @composer.ready_rows.size %>
+      <% now_rows = @composer.now_rows %>
+      <% if @composer.actionable_rows.empty? %>
+        <span class="sub">Nothing left to schedule in this post.</span>
+      <% elsif @composer.all_ready? %>
+        <% if now_rows.any? %>
+          <% later = ready - now_rows.size %>
+          <% label = "Publish #{now_rows.size} now" + (later.positive? ? ", schedule #{later}" : "") %>
+          <%= form.button label, name: "commit_action", value: "schedule", class: "button primary" %>
+        <% else %>
+          <%= form.button "Schedule #{pluralize(ready, 'publication')}", name: "commit_action", value: "schedule",
+                          class: "button primary" %>
+        <% end %>
+      <% else %>
+        <%= form.button "Schedule #{pluralize(@composer.actionable_rows.size, 'publication')}", class: "button primary",
+                        disabled: true, aria: { describedby: "schedule-problems" } %>
+        <% if ready.positive? %>
+          <%= form.button "Schedule #{ready} ready only", name: "commit_action", value: "schedule_ready",
+                          class: "button" %>
+        <% end %>
+      <% end %>
+    </div>
+    <% unless @composer.all_ready? %>
+      <p id="schedule-problems" class="sub footer-note">
+        <%= pluralize(@composer.actionable_rows.size - @composer.ready_rows.size, "publication") %> need changes before
+        everything can be scheduled. The others stay as drafts unless you schedule only the ready ones.
+      </p>
+    <% end %>
+  <% end %>
+</div>

@@ -1,0 +1,36 @@
+<% content_for :title, "New post · SignalCraft" %>
+
+<div class="composer">
+  <%= form_with url: posts_path, class: "composer-form" do |form| %>
+    <%= hidden_field_tag :workspace_id, @workspace.id %>
+    <div class="editor">
+      <h1>New post</h1>
+      <p class="sub"><%= @workspace.name %> · Display: <%= @workspace.default_timezone %></p>
+
+      <fieldset class="field">
+        <legend class="label">Accounts</legend>
+        <% if @accounts.empty? %>
+          <p class="sub">Connect an account to start scheduling.</p>
+        <% end %>
+        <div class="chips">
+          <% @accounts.each do |account| %>
+            <label class="chip-check">
+              <%= check_box_tag "account_ids[]", account.id, false, id: "account_#{account.id}" %>
+              <%= account.display_name %> <span class="sub"><%= platform_name(account) %></span>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <%= label_tag "post_body", "Shared text", class: "label" %>
+        <%= text_area_tag "post[body]", @post.body, id: "post_body", rows: 6, maxlength: 20_000, class: "textinput" %>
+        <p class="sub">Each account can get its own wording after you save. Media uploads are not available yet.</p>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="sub">Next: choose when each account publishes.</span>
+      <%= form.submit "Save draft", class: "button primary" %>
+    </div>
+  <% end %>
+</div>

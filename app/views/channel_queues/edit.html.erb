@@ -1,0 +1,58 @@
+<% content_for :title, "Posting times · SignalCraft" %>
+<% account = @queue.social_account %>
+
+<div class="workhead">
+  <div>
+    <h1>Posting times</h1>
+    <p class="sub"><%= account.display_name %> · <%= platform_name(account) %></p>
+  </div>
+  <%= link_to "Back to queue", root_path(workspace_id: @queue.workspace_id), class: "button" %>
+</div>
+
+<div class="split">
+  <section class="card">
+    <%= form_with url: channel_queue_path(@queue), method: :patch, class: "form" do |form| %>
+      <%= hidden_field_tag :version, @queue.version %>
+      <%= label_tag :timezone, "Time zone" %>
+      <%= select_tag :timezone,
+                     options_for_select(ActiveSupport::TimeZone.all.map { |z| z.tzinfo.identifier }.uniq.sort
+                                          .push(@queue.timezone).uniq.sort, @queue.timezone),
+                     class: "select" %>
+
+      <fieldset class="weekdays">
+        <legend>Times for each day (HH:MM, separated by commas)</legend>
+        <% ChannelQueuesController::WEEKDAYS.each do |weekday, name| %>
+          <div class="weekday">
+            <%= label_tag "times_#{weekday}", name %>
+            <%= text_field_tag "times[#{weekday}]", @times[weekday], id: "times_#{weekday}", placeholder: "09:00, 15:30",
+                               autocomplete: "off" %>
+          </div>
+        <% end %>
+      </fieldset>
+      <% if @can_publish %>
+        <%= form.submit "Save posting times", class: "button primary" %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section class="card" aria-labelledby="preview-heading">
+    <h2 id="preview-heading">Next ten posting times</h2>
+    <p class="sub">In <%= @queue.timezone %>.</p>
+    <% if @preview.empty? %>
+      <p class="sub">Choose posting times for this account.</p>
+    <% else %>
+      <ol class="occurrences">
+        <% @preview.each do |occurrence| %>
+          <li title="<%= time_with_offset(occurrence.at, @queue.timezone) %>">
+            <%= occurrence.at.in_time_zone(@queue.timezone).strftime("%a %-d %b, %H:%M") %>
+            <span class="sub"><%= occurrence.at.in_time_zone(@queue.timezone).formatted_offset %></span>
+          </li>
+        <% end %>
+      </ol>
+    <% end %>
+    <p class="sub">
+      Daylight-saving rules: a posting time that doesn't exist on the day clocks move forward is skipped
+      that day. A posting time that happens twice when clocks move back runs once, at the first occurrence.
+    </p>
+  </section>
+</div>

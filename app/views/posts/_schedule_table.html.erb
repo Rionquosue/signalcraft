@@ -1,0 +1,71 @@
+<div class="tablewrap">
+  <table class="schedule">
+    <thead>
+      <tr><th scope="col">Service / account</th><th scope="col">Mode</th><th scope="col">Date and time</th>
+          <th scope="col">Zone</th><th scope="col">Status</th></tr>
+    </thead>
+    <tbody>
+      <% composer.rows.each do |row| %>
+        <% target = row.target %>
+        <% field = "schedule[#{target.id}]" %>
+        <% input_id = "schedule_#{target.id}" %>
+        <tr class="<%= 'invalid' unless row.ready? %>">
+          <th scope="row">
+            <%= platform_name(target.social_account) %> / <%= target.social_account.display_name %>
+          </th>
+          <td>
+            <% if target.editable? %>
+              <%= label_tag "#{input_id}_mode", "Mode for #{target.social_account.display_name}", class: "visually-hidden" %>
+              <%= select_tag "#{field}[mode]",
+                             options_for_select([["Queue", "queue"], ["Fixed time", "manual"], ["Now", "now"]], row.mode),
+                             id: "#{input_id}_mode" %>
+            <% else %>
+              <%= mode_label(target) %>
+            <% end %>
+          </td>
+          <td class="time">
+            <% if target.editable? %>
+              <%= label_tag "#{input_id}_local_at", "Fixed time for #{target.social_account.display_name}", class: "visually-hidden" %>
+              <%= datetime_local_field_tag "#{field}[local_at]", row.local_value, id: "#{input_id}_local_at",
+                                           aria: { describedby: ("#{input_id}_error" unless row.ready?) } %>
+              <% if row.offsets %>
+                <%= label_tag "#{input_id}_offset", "Which one?", class: "sub" %>
+                <%= select_tag "#{field}[utc_offset]",
+                               options_for_select(row.offsets.each_with_index.map { |offset, i|
+                                 ["#{i.zero? ? 'First' : 'Second'} (#{offset_label(offset)})", offset] }, row.utc_offset),
+                               id: "#{input_id}_offset" %>
+              <% end %>
+              <% if target.queue? && target.scheduled? %>
+                <p class="sub">Next slot: <%= display_time(target.due_at, target.social_account.timezone) %></p>
+              <% end %>
+            <% else %>
+              <%= display_time(target.due_at, target.social_account.timezone) %>
+            <% end %>
+          </td>
+          <td>
+            <%= hidden_field_tag "#{field}[timezone]", row.timezone, id: "#{input_id}_timezone" %>
+            <%= row.timezone %>
+          </td>
+          <td>
+            <% if row.ready? %>
+              <%= target.draft? ? "Ready" : state_badge(target) %>
+            <% else %>
+              <span id="<%= input_id %>_error" class="error-text"><%= row.error %></span>
+              <% if row.next_valid %>
+                <span class="sub">Try <%= row.next_valid.strftime("%H:%M") %>.</span>
+              <% end %>
+            <% end %>
+            <% if target.scheduled? || target.retry_wait? %>
+              <%= link_to "Move to drafts", unschedule_post_target_path(target), data: { turbo_method: :post } %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+<p class="sub">
+  Queue uses the account's next free posting time. Fixed time stays put when the queue is reordered.
+  Daylight-saving rules: a time skipped when clocks move forward can't be chosen; a time that happens twice
+  asks which one you mean.
+</p>

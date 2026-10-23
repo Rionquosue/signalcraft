@@ -1,0 +1,46 @@
+<% zone = @workspace.default_timezone %>
+<% next_slot = queue&.next_occurrences(count: 1)&.first %>
+<section class="column" aria-labelledby="account-<%= account.id %>">
+  <header class="colhead">
+    <div class="grow">
+      <h2 id="account-<%= account.id %>"><%= account.display_name %></h2>
+      <p class="sub"><%= platform_name(account) %> · <%= account.timezone %></p>
+      <p class="sub">
+        <%= pluralize(targets.size, "publication") %>
+        · Next slot: <%= next_slot ? display_time(next_slot.at, zone) : "none" %>
+      </p>
+      <% if queue&.paused? %>
+        <span class="indicator">Account paused</span>
+      <% end %>
+    </div>
+    <% if queue && @can_publish %>
+      <div class="colactions">
+        <% if queue.paused? %>
+          <%= link_to "Resume", resume_channel_queue_path(queue), class: "pause" %>
+        <% else %>
+          <%= button_to "Pause", pause_channel_queue_path(queue), class: "pause",
+                        form: { data: { turbo_confirm: "Pause all new publications for this account? Publications already sending may finish." } } %>
+        <% end %>
+        <%= link_to "Posting times", edit_channel_queue_path(queue), class: "pause" %>
+      </div>
+    <% end %>
+  </header>
+
+  <% if queue && queue.queue_slots.none? %>
+    <div class="empty">
+      <p>Choose posting times for this account.</p>
+      <% if @can_publish %><%= link_to "Edit schedule", edit_channel_queue_path(queue) %><% end %>
+    </div>
+  <% end %>
+
+  <% if targets.empty? %>
+    <div class="empty">
+      <p>Your queue is clear.</p>
+      <% if @can_publish %><%= link_to "Create post", new_post_path(workspace_id: @workspace.id) %><% end %>
+    </div>
+  <% else %>
+    <% targets.each do |target| %>
+      <%= render "card", target: target, queue: queue, zone: zone, waiting: waiting %>
+    <% end %>
+  <% end %>
+</section>

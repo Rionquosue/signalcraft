@@ -1,0 +1,36 @@
+<% platform = platform_name(target.social_account) %>
+<section class="platform" aria-labelledby="platform-heading">
+  <h2 id="platform-heading"><%= target.social_account.display_name %> · <%= platform %></h2>
+  <p class="sub">
+    <%= state_badge(target) %> <%= mode_label(target) %> ·
+    <%= display_time(target.due_at, target.social_account.timezone) %> (<%= target.social_account.timezone %>)
+  </p>
+
+  <% if target.editable? %>
+    <%= form_with url: post_target_path(target), method: :patch do |form| %>
+      <div class="field">
+        <%= label_tag "post_target_body", "Text for #{platform}", class: "label" %>
+        <% if target.body_overridden? %>
+          <span class="badge neutral">Edited for <%= platform %></span>
+        <% else %>
+          <span class="sub">Following the shared draft</span>
+        <% end %>
+        <%= text_area_tag "post_target[body]", target.effective_body, id: "post_target_body", rows: 5,
+                          maxlength: 20_000, class: "textinput" %>
+        <p class="sub"><%= target.effective_body.length %> characters. Saving changes only this platform; its time is unchanged.</p>
+      </div>
+      <div class="actions">
+        <%= form.submit "Save for #{platform}", class: "button" %>
+      </div>
+    <% end %>
+    <% if target.body_overridden? %>
+      <%= button_to "Reset to shared", body_post_target_path(target), method: :delete, class: "button" %>
+    <% end %>
+    <% if (problem = target.scheduling_problem) %>
+      <p class="error-text" role="alert"><%= problem %></p>
+    <% end %>
+  <% else %>
+    <p>This publication is <%= target_state_label(target).downcase %> and can't be edited.</p>
+    <%= button_to "Copy to new draft", copy_post_target_path(target), class: "button" %>
+  <% end %>
+</section>

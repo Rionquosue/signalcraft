@@ -1,0 +1,46 @@
+<% content_for :title, "Resume account · SignalCraft" %>
+<% account = @queue.social_account %>
+<% zone = @queue.workspace.default_timezone %>
+
+<div class="workhead">
+  <h1>Resume <%= account.display_name %>?</h1>
+  <p class="sub">New publications will start again.</p>
+</div>
+
+<section class="card">
+  <% if @preview.moves.empty? && @preview.missed.empty? %>
+    <p>Nothing fell due while this account was paused. Queued posts keep their times.</p>
+  <% end %>
+
+  <% if @preview.moves.any? %>
+    <h2>Queued posts that move to their next slot</h2>
+    <table>
+      <thead><tr><th scope="col">Post</th><th scope="col">Was</th><th scope="col">Becomes</th></tr></thead>
+      <tbody>
+        <% @preview.moves.each do |change| %>
+          <tr>
+            <td><%= truncate(change.target.effective_body, length: 80) %></td>
+            <td class="time"><%= display_time(change.from, zone) %></td>
+            <td class="time"><%= display_time(change.to, zone) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <% if @preview.missed.any? %>
+    <h2>Fixed-time posts that need a decision</h2>
+    <p class="sub">These missed their time while paused. After resuming they show "Schedule missed" with
+      Publish now and Reschedule.</p>
+    <ul>
+      <% @preview.missed.each do |target| %>
+        <li><%= display_time(target.due_at, zone) %> · <%= truncate(target.effective_body, length: 80) %></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <div class="actions">
+    <%= button_to "Resume account", resume_channel_queue_path(@queue), class: "button primary" %>
+    <%= link_to "Keep paused", root_path(workspace_id: @queue.workspace_id), class: "button" %>
+  </div>
+</section>
