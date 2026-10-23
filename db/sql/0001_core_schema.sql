@@ -561,7 +561,9 @@ CREATE TABLE queue_entries (
   CONSTRAINT queue_entries_rank_key UNIQUE (channel_queue_id, rank) DEFERRABLE INITIALLY DEFERRED,
   CONSTRAINT queue_entries_slot_occurrence_key
     UNIQUE (channel_queue_id, slot_occurrence_at) DEFERRABLE INITIALLY DEFERRED,
-  CHECK ((queue_slot_id IS NULL) = (slot_occurrence_at IS NULL))
+  -- The occurrence is the assignment; the slot is only where it came from.
+  -- Deleting a slot sets queue_slot_id to NULL and keeps the occurrence.
+  CONSTRAINT queue_entries_slot_needs_occurrence CHECK (queue_slot_id IS NULL OR slot_occurrence_at IS NOT NULL)
 );
 
 -- ---------------------------------------------------------------------------

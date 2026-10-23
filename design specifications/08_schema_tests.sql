@@ -89,6 +89,26 @@ SET CONSTRAINTS ALL IMMEDIATE;
 SET CONSTRAINTS ALL DEFERRED;
 DO $$ BEGIN RAISE NOTICE 'PASS  deferred rank swap commits'; END $$;
 
+SELECT pg_temp.must_fail('a queue entry''s slot reference needs an occurrence', $$
+  UPDATE queue_entries SET slot_occurrence_at = NULL
+  WHERE post_target_id = '00000000-0000-0000-0000-000000000201' $$);
+
+-- Deleting a slot keeps the occurrences already assigned from it.
+INSERT INTO queue_slots (id, channel_queue_id, iso_weekday, local_time) VALUES
+  ('00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000e1', 6, '09:00');
+UPDATE queue_entries SET queue_slot_id = '00000000-0000-0000-0000-0000000000f2'
+WHERE post_target_id = '00000000-0000-0000-0000-000000000201';
+DELETE FROM queue_slots WHERE id = '00000000-0000-0000-0000-0000000000f2';
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM queue_entries WHERE post_target_id = '00000000-0000-0000-0000-000000000201'
+                 AND queue_slot_id IS NULL AND slot_occurrence_at = '2026-10-23 13:00Z') THEN
+    RAISE EXCEPTION 'FAIL  deleting a slot keeps the entry''s occurrence';
+  END IF;
+  RAISE NOTICE 'PASS  deleting a slot keeps the entry''s occurrence';
+END $$;
+UPDATE queue_entries SET queue_slot_id = '00000000-0000-0000-0000-0000000000f1'
+WHERE post_target_id = '00000000-0000-0000-0000-000000000201';
+
 SELECT pg_temp.must_fail('needs_attention requires a reason', $$
   UPDATE post_targets SET state = 'needs_attention'
   WHERE id = '00000000-0000-0000-0000-000000000201' $$);

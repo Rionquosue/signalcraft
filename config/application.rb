@@ -22,6 +22,7 @@ require_relative "../lib/signal_craft"
 require_relative "../lib/signal_craft/settings"
 require_relative "../lib/signal_craft/plugins/registry"
 require_relative "../lib/signal_craft/plugins/lock"
+require_relative "../lib/signal_craft/social_publisher"
 
 # Operator configuration from config/signalcraft.yml, the environment and
 # secret files. An invalid configuration stops boot with every problem listed.

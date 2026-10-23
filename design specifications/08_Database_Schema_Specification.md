@@ -1,6 +1,6 @@
 # Database schema — specification sheet
 
-Schema 1.1 • 22 October 2026 • Proposed implementation contract
+Schema 1.2 • 23 October 2026 • Proposed implementation contract
 
 ## Purpose and companions
 
@@ -172,6 +172,7 @@ Dispatcher indexes are partial, so each scan reads only live rows: due scheduled
 - Unique `(channel_queue_id, slot_occurrence_at)`: no two entries claim one slot occurrence.
 - Unique `(channel_queue_id, rank)`.
 - Both are deferrable, so a reorder can rewrite every rank and occurrence in one transaction and is checked at commit.
+- `queue_slot_id` records which slot an occurrence came from. Deleting the slot sets it to null and keeps `slot_occurrence_at`, because the occurrence is the assignment; a slot reference without an occurrence is rejected.
 - Composite foreign keys guarantee the entry, its queue and its target all belong to the same account.
 
 ## Delivery
@@ -293,6 +294,10 @@ Solid Queue tables are owned by `social_migrator` and used by `social_app`. The 
 ## Capacity notes
 
 Media dominates storage: `media_chunks` will be most of the database, and of WAL and backups. Everything else is small; at 10,000 targets per month, delivery tables grow by tens of megabytes per year. Monitor `media_chunks` bloat and autovacuum after large deletions (02, Storage characteristics).
+
+## Changes in 1.2
+
+- `queue_entries`: a slot reference now only requires an occurrence (`queue_entries_slot_needs_occurrence`), instead of the two being null together. The old rule made it impossible to delete a slot still referenced by an entry, because `ON DELETE SET NULL` left an occurrence without a slot.
 
 ## Changes in 1.1
 

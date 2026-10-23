@@ -118,7 +118,130 @@ class PostTarget < ApplicationRecord
     update!(revision: revision + 1, updater: by)
   end
 
+  # --- Scheduling (design specifications/02, Scheduling semantics) ---------
+  #
+  # Changing the time is separate from editing content: these methods never
+  # touch the text, media or revision. The account's queue row is locked
+  # before the target row, the same order allocation and claims use.
+
+  # A schedule that cannot be applied; the message is shown to the user.
+  class ScheduleError < StandardError; end
+
+  def requires_media?
+    social_account.plugin.manifest.dig("capabilities", "requires_media") == true
+  end
+
+  # Why this target cannot be scheduled yet, or nil.
+  def scheduling_problem
+    return "Needs a photo or video" if requires_media? && effective_media.empty?
+
+    nil
+  end
+
+  # mode "queue": next free slot in the account's queue.
+  # mode "manual": a fixed wall-clock time (`local_at`, a floating Time) in
+  #   `timezone`; `utc_offset` picks one instant of a repeated DST time.
+  # mode "now": due immediately; the dispatcher is notified.
+  def schedule!(by:, mode:, local_at: nil, timezone: nil, utc_offset: nil, now: Time.current)
+    raise ScheduleError, "Unknown schedule mode" unless MODES.include?(mode.to_s)
+
+    queue = ChannelQueue.for_account!(social_account)
+    queue.transaction do
+      queue.lock!
+      lock!
+      raise NotEditable, self unless editable?
+
+      problem = scheduling_problem
+      raise ScheduleError, problem if problem
+
+      case mode.to_s
+      when "manual" then schedule_manual(local_at, timezone || social_account.timezone, utc_offset, now)
+      when "now" then schedule_now(now)
+      when "queue" then schedule_in_queue
+      end
+      self.updater = by
+      save!
+      sync_queue_membership!(queue, now)
+      OutboxEvent.announce!(now? ? "post_target.publish_requested" : "post_target.scheduled",
+                            subject: self, workspace: workspace, payload: { mode: mode.to_s })
+      AuditEvent.record!(action: "post_target.scheduled", actor: by, workspace: workspace, subject: self,
+                         details: { mode: mode.to_s, due_at: due_at&.iso8601 })
+    end
+    self
+  end
+
+  def publish_now!(by:, now: Time.current)
+    schedule!(by: by, mode: "now", now: now)
+  end
+
+  # Back to draft ("Save draft"); leaves the queue.
+  def unschedule!(by:, now: Time.current)
+    change_to!("draft", by: by, now: now)
+  end
+
+  def cancel!(by:, now: Time.current)
+    change_to!("cancelled", by: by, now: now)
+  end
+
   private
+
+  def change_to!(new_state, by:, now:)
+    queue = ChannelQueue.for_account!(social_account)
+    queue.transaction do
+      queue.lock!
+      lock!
+      raise NotEditable, self unless editable?
+
+      publish_intents.state_open.each(&:close!)
+      update!(state: new_state, attention_reason: nil, blocked_reason: nil, retry_at: nil,
+              due_at: manual? && new_state == "draft" ? due_at : nil, updater: by)
+      sync_queue_membership!(queue, now)
+      AuditEvent.record!(action: "post_target.#{new_state == 'draft' ? 'unscheduled' : 'cancelled'}",
+                         actor: by, workspace: workspace, subject: self)
+    end
+    self
+  end
+
+  def schedule_manual(local_at, zone, utc_offset, now)
+    raise ScheduleError, "Choose a date and time" if local_at.nil?
+
+    due = Scheduling::WallClock.resolve(zone, local_at, utc_offset: utc_offset)
+    raise ScheduleError, "Choose a time in the future" if due <= now
+
+    assign_attributes(mode: "manual", due_at: due, scheduled_local_at: local_at, scheduled_timezone: zone,
+                      scheduled_utc_offset_seconds: (local_at - due).to_i)
+    become_scheduled
+  rescue Scheduling::WallClock::Nonexistent, Scheduling::WallClock::Ambiguous => e
+    raise ScheduleError, e.message
+  end
+
+  def schedule_now(now)
+    assign_attributes(mode: "now", due_at: now, scheduled_local_at: nil, scheduled_timezone: nil,
+                      scheduled_utc_offset_seconds: nil)
+    become_scheduled
+  end
+
+  def schedule_in_queue
+    # due_at is set by the queue allocator in the same transaction.
+    assign_attributes(mode: "queue", scheduled_local_at: nil, scheduled_timezone: nil,
+                      scheduled_utc_offset_seconds: nil)
+    self.due_at = nil unless queue_entry
+    become_scheduled
+  end
+
+  def become_scheduled
+    assign_attributes(state: "scheduled", attention_reason: nil, blocked_reason: nil, retry_at: nil)
+  end
+
+  # Only scheduled queue-mode targets belong to the queue.
+  def sync_queue_membership!(queue, now)
+    if scheduled? && queue?
+      queue.enqueue!(self, now: now)
+    elsif QueueEntry.exists?(post_target_id: id)
+      queue.dequeue!(self, now: now)
+    end
+    reload
+  end
 
   def replace_media!(items)
     post_target_media.delete_all

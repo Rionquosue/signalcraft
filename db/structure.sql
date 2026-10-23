@@ -892,8 +892,8 @@ CREATE TABLE public.queue_entries (
     slot_occurrence_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT queue_entries_check CHECK (((queue_slot_id IS NULL) = (slot_occurrence_at IS NULL))),
-    CONSTRAINT queue_entries_rank_check CHECK ((rank >= 0))
+    CONSTRAINT queue_entries_rank_check CHECK ((rank >= 0)),
+    CONSTRAINT queue_entries_slot_needs_occurrence CHECK (((queue_slot_id IS NULL) OR (slot_occurrence_at IS NOT NULL)))
 );
 
 
@@ -4340,6 +4340,8 @@ ALTER TABLE ONLY public.workspace_plugins
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261023000002'),
+('20261023000001'),
 ('20261022000002'),
 ('20261022000001');
 
