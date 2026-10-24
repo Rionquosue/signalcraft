@@ -18,6 +18,7 @@ module ApplicationHelper
     "published" => "success", "needs_attention" => "warn", "blocked" => "warn", "retry_wait" => "warn",
     "failed" => "danger", "cancelled" => "neutral", "draft" => "neutral"
   }.freeze
+  MODE_LABELS = { "queue" => "Queue", "manual" => "Fixed time", "now" => "Now" }.freeze
 
   def target_state_label(target, now: Time.current)
     case target.state
@@ -44,7 +45,12 @@ module ApplicationHelper
   end
 
   def mode_label(target)
-    { "queue" => "Queue", "manual" => "Fixed time", "now" => "Now" }.fetch(target.mode)
+    MODE_LABELS.fetch(target.mode)
+  end
+
+  # [label, mode] pairs for the composer's mode select.
+  def mode_options
+    MODE_LABELS.map { |mode, label| [label, mode] }
   end
 
   # "23 Oct, 09:00" with the year added when it is not the current one.

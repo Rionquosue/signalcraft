@@ -8,10 +8,10 @@ class PostsController < ApplicationController
   include WorkspaceAccess
 
   before_action :set_post, only: %i[edit update]
+  before_action -> { require_publisher!(@post.workspace_id) }, only: :update
 
   def new
-    @workspace = current_user.workspaces.active.find_by(id: params[:workspace_id]) ||
-                 current_user.workspaces.active.order(:name).first
+    @workspace = selected_workspace(params[:workspace_id])
     return redirect_to(root_path, alert: "You're not a member of any workspace yet.") unless @workspace
 
     require_publisher!(@workspace.id)
@@ -48,7 +48,6 @@ class PostsController < ApplicationController
 
   # Saves the shared text, then applies the footer action to the schedule table.
   def update
-    require_publisher!(@post.workspace_id)
     body = params.dig(:post, :body)
     @post.update_shared_body!(body.to_s, by: current_user) if body && body != @post.body
     @composer = Composer.new(@post.reload, schedule_params)
@@ -91,8 +90,7 @@ class PostsController < ApplicationController
   end
 
   def set_post
-    @post = Post.where(workspace_id: accessible_workspace_ids).find(params[:id])
-    membership_for(@post.workspace_id)
+    @post = accessible(Post).find(params[:id])
   end
 
   def schedule_params

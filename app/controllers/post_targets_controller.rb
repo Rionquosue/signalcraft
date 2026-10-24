@@ -10,7 +10,7 @@ class PostTargetsController < ApplicationController
   before_action -> { require_publisher!(@target.workspace_id) }
 
   rescue_from PostTarget::NotEditable, PostTarget::ScheduleError do |error|
-    redirect_to edit_post_path(@target.post, target: @target.id), alert: error.message
+    redirect_to target_tab_path, alert: error.message
   end
 
   # Text for this platform only. Submitting the shared text unchanged keeps
@@ -18,18 +18,18 @@ class PostTargetsController < ApplicationController
   def update
     body = params.dig(:post_target, :body).to_s
     if !@target.body_overridden? && body == @target.post.body
-      redirect_to edit_post_path(@target.post, target: @target.id), notice: "No changes."
+      redirect_to target_tab_path, notice: "No changes."
       return
     end
 
     @target.edit_for_platform!(by: current_user, body: body)
-    redirect_to edit_post_path(@target.post, target: @target.id),
+    redirect_to target_tab_path,
                 notice: "Saved for #{@target.social_account.display_name}. Other platforms are unchanged."
   end
 
   def reset_body
     @target.reset_body_to_shared!(by: current_user)
-    redirect_to edit_post_path(@target.post, target: @target.id), notice: "Text follows the shared draft again."
+    redirect_to target_tab_path, notice: "Text follows the shared draft again."
   end
 
   def publish_now
@@ -64,7 +64,12 @@ class PostTargetsController < ApplicationController
   private
 
   def set_target
-    @target = PostTarget.where(workspace_id: accessible_workspace_ids).find(params[:id])
+    @target = accessible(PostTarget).find(params[:id])
+  end
+
+  # The composer, opened on this target's tab.
+  def target_tab_path
+    edit_post_path(@target.post, target: @target.id)
   end
 
   def publish_now_notice

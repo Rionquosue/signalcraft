@@ -14,18 +14,7 @@
 
   <% if @preview.moves.any? %>
     <h2>Queued posts that move to their next slot</h2>
-    <table>
-      <thead><tr><th scope="col">Post</th><th scope="col">Was</th><th scope="col">Becomes</th></tr></thead>
-      <tbody>
-        <% @preview.moves.each do |change| %>
-          <tr>
-            <td><%= truncate(change.target.effective_body, length: 80) %></td>
-            <td class="time"><%= display_time(change.from, zone) %></td>
-            <td class="time"><%= display_time(change.to, zone) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+    <%= render "shared/date_changes", changes: @preview.moves, zone: zone %>
   <% end %>
 
   <% if @preview.missed.any? %>

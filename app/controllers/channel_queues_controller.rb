@@ -16,7 +16,7 @@ class ChannelQueuesController < ApplicationController
   end
 
   def edit
-    @can_publish = membership_for(@queue.workspace_id).can_publish?
+    @can_publish = publisher?(@queue.workspace_id)
     @times = @queue.queue_slots.group_by(&:iso_weekday)
                    .transform_values { |slots| slots.map { |s| s.local_time.strftime("%H:%M") }.join(", ") }
     @preview = @queue.next_occurrences(count: 10)
@@ -55,8 +55,7 @@ class ChannelQueuesController < ApplicationController
   private
 
   def set_queue
-    @queue = ChannelQueue.where(workspace_id: accessible_workspace_ids).find(params[:id])
-    membership_for(@queue.workspace_id)
+    @queue = accessible(ChannelQueue).find(params[:id])
   end
 
   # times: { "1" => "09:00, 15:30", ... } -> [[1, "09:00"], [1, "15:30"], ...]

@@ -22,12 +22,27 @@ module WorkspaceAccess
     current_user.memberships.joins(:workspace).merge(Workspace.active).select(:workspace_id)
   end
 
+  # `scope` limited to the signed-in user's active workspaces.
+  def accessible(scope)
+    scope.where(workspace_id: accessible_workspace_ids)
+  end
+
+  # The requested workspace, or the user's first one by name.
+  def selected_workspace(workspace_id)
+    workspaces = current_user.workspaces.active
+    workspaces.find_by(id: workspace_id) || workspaces.order(:name).first
+  end
+
   def membership_for(workspace_id)
     @memberships ||= {}
     @memberships[workspace_id] ||= current_user.memberships.find_by!(workspace_id: workspace_id)
   end
 
+  def publisher?(workspace_id)
+    membership_for(workspace_id).can_publish?
+  end
+
   def require_publisher!(workspace_id)
-    raise Forbidden unless membership_for(workspace_id).can_publish?
+    raise Forbidden unless publisher?(workspace_id)
   end
 end

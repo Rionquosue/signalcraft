@@ -17,7 +17,7 @@
             <% if target.editable? %>
               <%= label_tag "#{input_id}_mode", "Mode for #{target.social_account.display_name}", class: "visually-hidden" %>
               <%= select_tag "#{field}[mode]",
-                             options_for_select([["Queue", "queue"], ["Fixed time", "manual"], ["Now", "now"]], row.mode),
+                             options_for_select(mode_options, row.mode),
                              id: "#{input_id}_mode" %>
             <% else %>
               <%= mode_label(target) %>
