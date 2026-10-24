@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Invitation < ApplicationRecord
+  include DigestedToken
+
   LIFETIME = 7.days
 
   belongs_to :workspace
@@ -16,15 +18,15 @@ class Invitation < ApplicationRecord
 
   # Returns [invitation, token]; only the digest is stored.
   def self.issue!(workspace:, email:, role:, invited_by:)
-    token = SecureRandom.urlsafe_base64(32)
+    token = generate_token
     invitation = create!(workspace: workspace, email: email, role: role, inviter: invited_by,
-                         token_digest: Digest::SHA256.digest(token), expires_at: LIFETIME.from_now)
+                         token_digest: digest(token), expires_at: LIFETIME.from_now)
     [invitation, token]
   end
 
   def self.find_open_by_token(token)
     return nil if token.blank?
 
-    pending.find_by(token_digest: Digest::SHA256.digest(token))
+    pending.find_by(token_digest: digest(token))
   end
 end

@@ -3,6 +3,8 @@
 # A signed-in browser. The cookie holds a random token; only its SHA-256
 # digest is stored (design specifications/02, Lookup tokens).
 class Session < ApplicationRecord
+  include DigestedToken
+
   ABSOLUTE_LIFETIME = 30.days
   IDLE_TIMEOUT = 14.days
   TOUCH_INTERVAL = 5.minutes
@@ -13,7 +15,7 @@ class Session < ApplicationRecord
 
   # Returns [session, token]. The token is shown to the browser once.
   def self.start!(user:, ip_address: nil, user_agent: nil)
-    token = SecureRandom.urlsafe_base64(32)
+    token = generate_token
     session = create!(
       user: user,
       token_digest: digest(token),
@@ -33,10 +35,6 @@ class Session < ApplicationRecord
 
     session.touch_last_seen
     session
-  end
-
-  def self.digest(token)
-    Digest::SHA256.digest(token)
   end
 
   def touch_last_seen

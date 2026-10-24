@@ -6,7 +6,7 @@ class SocialAccount < ApplicationRecord
   CONNECTION_STATUSES = %w[connected reauthorization_required disconnected plugin_unavailable].freeze
 
   belongs_to :workspace
-  belongs_to :plugin, foreign_key: :plugin_id, primary_key: :plugin_id, inverse_of: :social_accounts
+  belongs_to :plugin, inverse_of: :social_accounts
   belongs_to :plugin_app_registration
   belongs_to :connector, class_name: "User", foreign_key: :connected_by, optional: true
   has_one :channel_queue, dependent: :destroy

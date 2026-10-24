@@ -3,7 +3,7 @@
 # The provider app a connection signs in through (design specifications/08):
 # operator-configured for most providers, stored per instance for Mastodon.
 class PluginAppRegistration < ApplicationRecord
-  belongs_to :plugin, foreign_key: :plugin_id, primary_key: :plugin_id, inverse_of: :plugin_app_registrations
+  belongs_to :plugin, inverse_of: :plugin_app_registrations
   has_many :social_accounts, dependent: :restrict_with_error
 
   string_enum :credentials_source, %w[stored operator_config]

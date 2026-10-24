@@ -18,14 +18,12 @@ class LoginThrottle < ApplicationRecord
   end
 
   def self.locked?(email:, ip_address:)
-    keys = { "email" => email, "ip" => ip_address }.filter_map { |scope, value| key_for(scope, value) if value.present? }
+    keys = present_values(email, ip_address).map { |scope, value| key_for(scope, value) }
     where(key_digest: keys).where("locked_until > ?", Time.current).exists?
   end
 
   def self.record_failure!(email:, ip_address:)
-    { "email" => email, "ip" => ip_address }.each do |scope, value|
-      bump!(scope, value) if value.present?
-    end
+    present_values(email, ip_address).each { |scope, value| bump!(scope, value) }
   end
 
   def self.reset!(email:)
@@ -54,5 +52,9 @@ class LoginThrottle < ApplicationRecord
       row.save!
     end
   end
-  private_class_method :bump!
+
+  def self.present_values(email, ip_address)
+    { "email" => email, "ip" => ip_address }.select { |_scope, value| value.present? }
+  end
+  private_class_method :bump!, :present_values
 end

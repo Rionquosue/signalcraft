@@ -5,7 +5,7 @@
 class PublishAttempt < ApplicationRecord
   belongs_to :publish_intent
   belongs_to :post_target
-  belongs_to :plugin, foreign_key: :plugin_id, primary_key: :plugin_id
+  belongs_to :plugin
   has_one :plugin_checkpoint, dependent: :destroy
 
   # Prefixed: "not_published" would otherwise clash with the negative scope of "published".

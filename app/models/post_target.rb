@@ -23,6 +23,9 @@ class PostTarget < ApplicationRecord
   # Marker for "leave this field as it is" in #edit_for_platform!.
   UNCHANGED = Object.new.freeze
 
+  # A schedule without a fixed wall-clock time.
+  NO_FIXED_TIME = { scheduled_local_at: nil, scheduled_timezone: nil, scheduled_utc_offset_seconds: nil }.freeze
+
   class NotEditable < StandardError
     def initialize(target)
       super("#{target.social_account&.display_name || 'This target'} can no longer be edited (#{target.state}); " \
@@ -79,10 +82,7 @@ class PostTarget < ApplicationRecord
   # sibling targets are never touched. `media` is a list of
   # { media_asset:, alt_text: } in publishing order.
   def edit_for_platform!(by:, body: UNCHANGED, media: UNCHANGED, provider_options: UNCHANGED)
-    transaction do
-      lock!
-      raise NotEditable, self unless editable?
-
+    while_editable do
       self.body_override = body unless body.equal?(UNCHANGED)
       self.provider_options = provider_options unless provider_options.equal?(UNCHANGED)
       replace_media!(media) unless media.equal?(UNCHANGED)
@@ -95,20 +95,14 @@ class PostTarget < ApplicationRecord
 
   # "Reset to shared" for the text.
   def reset_body_to_shared!(by:)
-    transaction do
-      lock!
-      raise NotEditable, self unless editable?
-
+    while_editable do
       update!(body_override: nil, revision: revision + 1, updater: by)
     end
   end
 
   # "Reset to shared" for the media.
   def reset_media_to_shared!(by:)
-    transaction do
-      lock!
-      raise NotEditable, self unless editable?
-
+    while_editable do
       post_target_media.delete_all
       update!(media_overridden: false, revision: revision + 1, updater: by)
     end
@@ -133,9 +127,7 @@ class PostTarget < ApplicationRecord
 
   # Why this target cannot be scheduled yet, or nil.
   def scheduling_problem
-    return "Needs a photo or video" if requires_media? && effective_media.empty?
-
-    nil
+    "Needs a photo or video" if requires_media? && effective_media.empty?
   end
 
   # mode "queue": next free slot in the account's queue.
@@ -143,18 +135,14 @@ class PostTarget < ApplicationRecord
   #   `timezone`; `utc_offset` picks one instant of a repeated DST time.
   # mode "now": due immediately; the dispatcher is notified.
   def schedule!(by:, mode:, local_at: nil, timezone: nil, utc_offset: nil, now: Time.current)
-    raise ScheduleError, "Unknown schedule mode" unless MODES.include?(mode.to_s)
+    mode = mode.to_s
+    raise ScheduleError, "Unknown schedule mode" unless MODES.include?(mode)
 
-    queue = ChannelQueue.for_account!(social_account)
-    queue.transaction do
-      queue.lock!
-      lock!
-      raise NotEditable, self unless editable?
-
+    while_editable(with_queue: true) do |queue|
       problem = scheduling_problem
       raise ScheduleError, problem if problem
 
-      case mode.to_s
+      case mode
       when "manual" then schedule_manual(local_at, timezone || social_account.timezone, utc_offset, now)
       when "now" then schedule_now(now)
       when "queue" then schedule_in_queue
@@ -163,9 +151,9 @@ class PostTarget < ApplicationRecord
       save!
       sync_queue_membership!(queue, now)
       OutboxEvent.announce!(now? ? "post_target.publish_requested" : "post_target.scheduled",
-                            subject: self, workspace: workspace, payload: { mode: mode.to_s })
+                            subject: self, workspace: workspace, payload: { mode: mode })
       AuditEvent.record!(action: "post_target.scheduled", actor: by, workspace: workspace, subject: self,
-                         details: { mode: mode.to_s, due_at: due_at&.iso8601 })
+                         details: { mode: mode, due_at: due_at&.iso8601 })
     end
     self
   end
@@ -185,13 +173,22 @@ class PostTarget < ApplicationRecord
 
   private
 
-  def change_to!(new_state, by:, now:)
-    queue = ChannelQueue.for_account!(social_account)
-    queue.transaction do
-      queue.lock!
+  # Runs the block in a transaction holding this row's lock, after checking
+  # that the locked row is still editable. With `with_queue`, the account's
+  # queue row is locked first and passed to the block.
+  def while_editable(with_queue: false)
+    queue = ChannelQueue.for_account!(social_account) if with_queue
+    transaction do
+      queue&.lock!
       lock!
       raise NotEditable, self unless editable?
 
+      yield queue
+    end
+  end
+
+  def change_to!(new_state, by:, now:)
+    while_editable(with_queue: true) do |queue|
       publish_intents.state_open.each(&:close!)
       update!(state: new_state, attention_reason: nil, blocked_reason: nil, retry_at: nil,
               due_at: manual? && new_state == "draft" ? due_at : nil, updater: by)
@@ -216,15 +213,13 @@ class PostTarget < ApplicationRecord
   end
 
   def schedule_now(now)
-    assign_attributes(mode: "now", due_at: now, scheduled_local_at: nil, scheduled_timezone: nil,
-                      scheduled_utc_offset_seconds: nil)
+    assign_attributes(mode: "now", due_at: now, **NO_FIXED_TIME)
     become_scheduled
   end
 
   def schedule_in_queue
     # due_at is set by the queue allocator in the same transaction.
-    assign_attributes(mode: "queue", scheduled_local_at: nil, scheduled_timezone: nil,
-                      scheduled_utc_offset_seconds: nil)
+    assign_attributes(mode: "queue", **NO_FIXED_TIME)
     self.due_at = nil unless queue_entry
     become_scheduled
   end

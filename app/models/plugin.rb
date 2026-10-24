@@ -8,9 +8,9 @@ class Plugin < ApplicationRecord
   string_enum :kind, %w[social commerce]
   string_enum :load_status, %w[loaded failed missing], prefix: :status
 
-  has_many :workspace_plugins, foreign_key: :plugin_id, inverse_of: :plugin, dependent: :restrict_with_error
-  has_many :plugin_app_registrations, foreign_key: :plugin_id, inverse_of: :plugin, dependent: :restrict_with_error
-  has_many :social_accounts, foreign_key: :plugin_id, inverse_of: :plugin, dependent: :restrict_with_error
+  has_many :workspace_plugins, inverse_of: :plugin, dependent: :restrict_with_error
+  has_many :plugin_app_registrations, inverse_of: :plugin, dependent: :restrict_with_error
+  has_many :social_accounts, inverse_of: :plugin, dependent: :restrict_with_error
 
   def usable?
     status_loaded?
