@@ -43,7 +43,7 @@ module Publishing
 
     # Known not to be published: retry under the policy, or fail.
     def retry_or_fail!(attempt, token, error: nil, retry_at: nil, attempt_state: "failed", now: Time.current)
-      attempt.update!(state: attempt_state, delivery_state: "not_submitted", finished_at: now, **error_fields(error))
+      finish_not_submitted!(attempt, attempt_state, error, now)
       attempts = attempt.publish_intent.publish_attempts.count
       if attempts > MAX_RETRIES
         failed!(attempt, token, now: now, update_attempt: false)
@@ -54,15 +54,13 @@ module Publishing
     end
 
     def failed!(attempt, token, error: nil, now: Time.current, update_attempt: true)
-      if update_attempt
-        attempt.update!(state: "failed", delivery_state: "not_submitted", finished_at: now, **error_fields(error))
-      end
+      finish_not_submitted!(attempt, "failed", error, now) if update_attempt
       fenced!(attempt.post_target_id, token, now, state: "failed", next_poll_at: nil)
       attempt.publish_intent.close!
     end
 
     def blocked!(attempt, token, reason, error: nil, now: Time.current)
-      attempt.update!(state: "failed", delivery_state: "not_submitted", finished_at: now, **error_fields(error))
+      finish_not_submitted!(attempt, "failed", error, now)
       fenced!(attempt.post_target_id, token, now, state: "blocked", blocked_reason: reason, next_poll_at: nil)
       attempt.publish_intent.close!
     end
@@ -87,6 +85,10 @@ module Publishing
                                                                     updated_at: now,
                                                                     lock_version: Arel.sql("lock_version + 1")))
       raise Superseded, "claim #{token} on target #{target_id} was superseded" if rows.zero?
+    end
+
+    def finish_not_submitted!(attempt, state, error, now)
+      attempt.update!(state: state, delivery_state: "not_submitted", finished_at: now, **error_fields(error))
     end
 
     # Capped exponential backoff with jitter: about 30 s, 1, 2, 4, 8 min.

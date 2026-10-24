@@ -72,9 +72,10 @@ class Composer
     rows.each do |row|
       next unless row.target.draft? && PostTarget::MODES.include?(row.mode)
 
-      row.target.update!(mode: row.mode, scheduled_local_at: row.mode == "manual" ? row.local_at : nil,
-                         scheduled_timezone: row.mode == "manual" && row.local_at ? row.timezone : nil,
-                         scheduled_utc_offset_seconds: row.mode == "manual" ? row.utc_offset : nil, updater: by)
+      manual = row.mode == "manual"
+      row.target.update!(mode: row.mode, scheduled_local_at: manual ? row.local_at : nil,
+                         scheduled_timezone: manual && row.local_at ? row.timezone : nil,
+                         scheduled_utc_offset_seconds: manual ? row.utc_offset : nil, updater: by)
     end
   end
 
@@ -99,7 +100,8 @@ class Composer
 
   def problem_for(row)
     return nil unless row.target.editable?
-    return row.target.scheduling_problem if row.target.scheduling_problem
+    scheduling_problem = row.target.scheduling_problem
+    return scheduling_problem if scheduling_problem
     return "Choose Queue, Fixed time or Now" unless PostTarget::MODES.include?(row.mode)
     return nil unless row.mode == "manual"
     return "Choose a date and time" if row.local_at.nil?

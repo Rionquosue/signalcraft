@@ -33,10 +33,11 @@ module Scheduling
 
     def apply!(accounts: nil)
       result = Result.new(moved: [], missed: [])
-      overdue(accounts: accounts).where.not(mode: "queue").pluck(:id).each do |id|
+      scope = overdue(accounts: accounts)
+      scope.where.not(mode: "queue").pluck(:id).each do |id|
         result.missed << id if mark_missed(id)
       end
-      overdue(accounts: accounts).where(mode: "queue").distinct.pluck(:social_account_id).each do |account_id|
+      scope.where(mode: "queue").distinct.pluck(:social_account_id).each do |account_id|
         result.moved.concat(reassign(account_id))
       end
       result
@@ -70,12 +71,12 @@ module Scheduling
 
         missed = queue.queue_entries.joins(:post_target)
                       .where(post_targets: { state: "scheduled", claim_owner: nil })
-                      .where("queue_entries.slot_occurrence_at < ?", @cutoff).pluck(:id, :post_target_id)
+                      .where("queue_entries.slot_occurrence_at < ?", @cutoff).pluck(:id)
         next [] if missed.empty?
 
-        changes = QueueAllocator.new(queue, now: @now)
-                                .apply!(release: missed.map(&:first), event: "queue.missed_schedules_moved")
-        moved = changes.select { |change| missed.any? { |entry_id, _| entry_id == change.entry.id } }
+        changes = QueueAllocator.new(queue, now: @now).apply!(release: missed, event: "queue.missed_schedules_moved")
+        missed_ids = missed.to_set
+        moved = changes.select { |change| missed_ids.include?(change.entry.id) }
         moved.each do |change|
           AuditEvent.record!(action: "post_target.moved_to_next_slot", actor: nil, workspace: queue.workspace,
                              subject: change.target,
