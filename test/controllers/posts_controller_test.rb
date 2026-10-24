@@ -18,9 +18,10 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def create_post(accounts = [social_accounts(:studio_bluesky), @second], body: "Shared launch text")
+    before = Post.ids
     post posts_path, params: { workspace_id: workspaces(:studio).id, account_ids: accounts.map(&:id),
                                post: { body: body } }
-    Post.order(:created_at).last
+    Post.where.not(id: before).sole
   end
 
   def targets_of(post_record)
@@ -155,6 +156,7 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
     get new_post_path(workspace_id: workspaces(:studio).id)
     assert_redirected_to root_path
     assert_no_difference -> { Post.count } do
+    before = Post.ids
       post posts_path, params: { workspace_id: workspaces(:studio).id, account_ids: [@second.id] }
     end
   end

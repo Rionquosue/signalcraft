@@ -373,6 +373,8 @@ class DispatcherTest < ActiveSupport::TestCase
   test "publish now is claimed from the outbox straight away" do
     target = new_target
     target.publish_now!(by: users(:bob))
+    # available_at defaults to the database clock, which travel_to does not move.
+    OutboxEvent.where(dispatched_at: nil).update_all(available_at: NOW)
 
     perform_enqueued_jobs { Publishing::Dispatcher.new(owner: "test-worker").drain_outbox }
 
