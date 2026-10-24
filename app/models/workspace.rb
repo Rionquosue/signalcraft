@@ -17,17 +17,11 @@ class Workspace < ApplicationRecord
   validates :media_quota_bytes, numericality: { only_integer: true, greater_than: 0 }
   validates :reporting_currency, format: { with: /\A[A-Z]{3}\z/ }
   validates :attribution_window_days, numericality: { in: 1..30 }
-  validate :timezone_must_exist
+  validates_known_time_zone :default_timezone
 
   scope :active, -> { where(archived_at: nil) }
 
   def owners
     users.merge(Membership.owner)
-  end
-
-  private
-
-  def timezone_must_exist
-    errors.add(:default_timezone, "is not a known time zone") unless ActiveSupport::TimeZone[default_timezone.to_s]
   end
 end

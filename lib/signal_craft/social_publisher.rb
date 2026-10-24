@@ -51,7 +51,7 @@ module SignalCraft
         @provider_code = provider_code
         @retry_at = retry_at
         @delivery_state = DELIVERY_STATES.include?(delivery_state.to_s) ? delivery_state.to_s : "unknown"
-        super(safe_message || self.class.name.split("::").last)
+        super(safe_message || error_class)
       end
 
       def error_class

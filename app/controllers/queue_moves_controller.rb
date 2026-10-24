@@ -28,6 +28,6 @@ class QueueMovesController < ApplicationController
   private
 
   def set_queue
-    @queue = ChannelQueue.where(workspace_id: accessible_workspace_ids).find(params[:channel_queue_id])
+    @queue = accessible(ChannelQueue).find(params[:channel_queue_id])
   end
 end

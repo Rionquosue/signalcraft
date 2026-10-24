@@ -5,7 +5,7 @@
 class PluginCheckpoint < ApplicationRecord
   MAX_PLAINTEXT_BYTES = 64 * 1024
 
-  belongs_to :plugin, foreign_key: :plugin_id, primary_key: :plugin_id
+  belongs_to :plugin
   belongs_to :publish_attempt, optional: true
 
   encrypts :data

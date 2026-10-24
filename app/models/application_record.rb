@@ -15,6 +15,13 @@ class ApplicationRecord < ActiveRecord::Base
     enum name, values.index_with(&:itself), validate: options.delete(:validate) { true }, **options
   end
 
+  # The attribute must name a time zone ActiveSupport knows.
+  def self.validates_known_time_zone(attribute)
+    validate do
+      errors.add(attribute, "is not a known time zone") unless ActiveSupport::TimeZone[public_send(attribute).to_s]
+    end
+  end
+
   private
 
   def assign_uuid_v7_primary_key

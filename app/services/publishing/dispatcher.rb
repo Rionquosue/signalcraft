@@ -22,7 +22,7 @@ module Publishing
       lateness = Scheduling::Lateness.apply!(now: now)
       recovered = recover_stale_claims
       polls = claim_polls
-      attempts = Claimer.new(owner: owner, now: now).claim_due
+      attempts = claimer.claim_due
       attempts.each { |attempt| PublishAttemptJob.perform_later(attempt.id) }
       ProcessHeartbeat.beat!(role: "worker")
       Summary.new(outbox: outbox, moved: lateness.moved.size, missed: lateness.missed.size, recovered: recovered,
@@ -59,7 +59,6 @@ module Publishing
     end
 
     def claim_polls
-      claimer = Claimer.new(owner: owner, now: now)
       PostTarget.where(state: "awaiting_provider", claim_owner: nil).where("next_poll_at <= ?", now)
                 .order(:next_poll_at).limit(100).pluck(:id).count do |id|
         attempt, token = claimer.claim_poll(id)
@@ -70,10 +69,14 @@ module Publishing
 
     private
 
+    def claimer
+      @claimer ||= Claimer.new(owner: owner, now: now)
+    end
+
     def handle(event)
       return unless event.event_type == "post_target.publish_requested"
 
-      attempt = Claimer.new(owner: owner, now: now).claim(event.subject_id)
+      attempt = claimer.claim(event.subject_id)
       PublishAttemptJob.perform_later(attempt.id) if attempt
     end
 

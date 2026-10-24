@@ -18,7 +18,7 @@ module Publishing
       account = target.social_account
       plugin = account.plugin
       return CONNECTION_BLOCKS[account.connection_status] if CONNECTION_BLOCKS.key?(account.connection_status)
-      return "plugin_unavailable" unless plugin.usable? && Addons.publisher_for(plugin)
+      return "plugin_unavailable" unless Addons.publisher_for(plugin) # nil unless the plugin is usable
       return "plugin_disabled" unless WorkspacePlugin.enabled.exists?(workspace_id: target.workspace_id,
                                                                       plugin_id: plugin.plugin_id)
       return "validation_failed" if target.scheduling_problem

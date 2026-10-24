@@ -13,7 +13,7 @@ class ChannelQueue < ApplicationRecord
   has_many :queue_entries, dependent: :destroy
 
   validates :timezone, presence: true
-  validate :timezone_must_exist
+  validates_known_time_zone :timezone
 
   # The account's queue, created on first use in the workspace's time zone.
   def self.for_account!(account)
@@ -65,8 +65,7 @@ class ChannelQueue < ApplicationRecord
   def reorder!(order, expected_version:, by:, now: Time.current)
     transaction do
       changes = allocator(now: now).apply!(order: order, expected_version: expected_version, event: "queue.reordered")
-      AuditEvent.record!(action: "queue.reordered", actor: by, workspace: workspace, subject: self,
-                         details: { moved: changes.count(&:moved?) })
+      audit!("queue.reordered", by, { moved: changes.count(&:moved?) })
       changes
     end
   end
@@ -94,8 +93,7 @@ class ChannelQueue < ApplicationRecord
       slots.uniq.each { |weekday, time| queue_slots.create!(iso_weekday: weekday, local_time: time) }
       queue_slots.reset
       allocator(now: now).apply!(event: "queue.slots_changed")
-      AuditEvent.record!(action: "queue.slots_changed", actor: by, workspace: workspace, subject: self,
-                         details: { timezone: timezone, slots: slots.map { |w, t| "#{w} #{t}" } })
+      audit!("queue.slots_changed", by, { timezone: timezone, slots: slots.map { |w, t| "#{w} #{t}" } })
     end
   end
 
@@ -104,7 +102,7 @@ class ChannelQueue < ApplicationRecord
       lock!
       update!(paused: true, paused_at: Time.current, pauser: by)
       OutboxEvent.announce!("queue.paused", subject: self, workspace: workspace)
-      AuditEvent.record!(action: "queue.paused", actor: by, workspace: workspace, subject: self)
+      audit!("queue.paused", by)
     end
   end
 
@@ -116,7 +114,7 @@ class ChannelQueue < ApplicationRecord
       lock!
       update!(paused: false, paused_at: nil, pauser: nil)
       OutboxEvent.announce!("queue.resumed", subject: self, workspace: workspace)
-      AuditEvent.record!(action: "queue.resumed", actor: by, workspace: workspace, subject: self)
+      audit!("queue.resumed", by)
     end
     Scheduling::Lateness.apply!(now: now, accounts: [social_account_id])
   end
@@ -135,7 +133,7 @@ class ChannelQueue < ApplicationRecord
 
   private
 
-  def timezone_must_exist
-    errors.add(:timezone, "is not a known time zone") unless ActiveSupport::TimeZone[timezone.to_s]
+  def audit!(action, by, details = nil)
+    AuditEvent.record!(action: action, actor: by, workspace: workspace, subject: self, details: details)
   end
 end
